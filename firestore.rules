@@ -1,0 +1,132 @@
+rules_version = '2';
+
+// Regras de segurança do Controle do Carro.
+// Princípio: NEGAR TUDO por padrão. Só libera para quem:
+//   1) está logado;
+//   2) tem o e-mail verificado (contas Google já vêm verificadas);
+//   3) tem o e-mail na lista "emails" do documento da família.
+// Cada família só enxerga e altera os próprios registros.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Funções de apoio ----------
+    function logadoComEmailVerificado() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
+    }
+    function meuEmail() {
+      return request.auth.token.email.lower();
+    }
+    function caminhoFamilia(fid) {
+      return /databases/$(database)/documents/familias/$(fid);
+    }
+    function membro(fid) {
+      return logadoComEmailVerificado()
+        && exists(caminhoFamilia(fid))
+        && meuEmail() in get(caminhoFamilia(fid)).data.emails;
+    }
+
+    function textoAte(v, max) { return v is string && v.size() <= max; }
+    function dataValida(v) { return v is string && v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'); }
+    function nuloOuNumero(v) { return v == null || v is number; }
+
+    function familiaValida(d) {
+      return d.keys().hasAll(['nome', 'emails', 'criadoPor', 'criadoPorEmail', 'criadoEm'])
+        && d.keys().hasOnly(['nome', 'emails', 'criadoPor', 'criadoPorEmail', 'criadoEm'])
+        && textoAte(d.nome, 60)
+        && d.emails is list && d.emails.size() >= 1 && d.emails.size() <= 20
+        && d.criadoPor is string
+        && d.criadoPorEmail is string
+        && d.criadoPorEmail in d.emails      // quem criou não pode ser removido
+        && d.criadoEm is number;
+    }
+
+    function veiculoValido(d) {
+      return d.keys().hasAll(['nome', 'cor', 'oleoKm'])
+        && d.keys().hasOnly(['nome', 'marca', 'modelo', 'ano', 'cor', 'oleoKm', 'oleoMeses', 'criadoEm'])
+        && d.nome is string && d.nome.size() >= 1 && d.nome.size() <= 40
+        && textoAte(d.get('marca', ''), 30)
+        && textoAte(d.get('modelo', ''), 30)
+        && textoAte(d.get('ano', ''), 4)
+        && d.cor is string && d.cor.matches('^#[0-9a-fA-F]{6}$')
+        && d.oleoKm is number && d.oleoKm >= 0 && d.oleoKm <= 100000
+        && (d.get('oleoMeses', null) == null
+            || (d.oleoMeses is int && d.oleoMeses >= 1 && d.oleoMeses <= 48));
+    }
+
+    function abastecimentoValido(d) {
+      return d.keys().hasAll(['carroId', 'data', 'km', 'litros', 'valor'])
+        && d.keys().hasOnly(['carroId', 'data', 'km', 'distanciaInformada', 'litros', 'valor',
+                             'tanqueCheio', 'combustivel', 'obs', 'criadoEm'])
+        && d.carroId is string && d.carroId.size() <= 64
+        && dataValida(d.data)
+        && d.km is number && d.km >= 0 && d.km < 10000000
+        && d.litros is number && d.litros > 0 && d.litros < 1000
+        && d.valor is number && d.valor > 0 && d.valor < 100000
+        && nuloOuNumero(d.get('distanciaInformada', null))
+        && d.get('tanqueCheio', true) is bool
+        && textoAte(d.get('combustivel', ''), 20)
+        && textoAte(d.get('obs', ''), 300)
+        && nuloOuNumero(d.get('criadoEm', null));
+    }
+
+    function manutencaoValida(d) {
+      return d.keys().hasAll(['carroId', 'tipo', 'data', 'km'])
+        && d.keys().hasOnly(['carroId', 'tipo', 'descricao', 'data', 'km', 'valor',
+                             'lembreteKm', 'lembreteData', 'obs', 'criadoEm'])
+        && d.carroId is string && d.carroId.size() <= 64
+        && d.tipo in ['oleo', 'pneus', 'revisao', 'freios', 'bateria', 'alinhamento', 'outro']
+        && textoAte(d.get('descricao', ''), 60)
+        && dataValida(d.data)
+        && d.km is number && d.km >= 0 && d.km < 10000000
+        && (d.get('valor', null) == null || (d.valor is number && d.valor >= 0 && d.valor < 1000000))
+        && (d.get('lembreteKm', null) == null || (d.lembreteKm is number && d.lembreteKm > 0))
+        && (d.get('lembreteData', null) == null || dataValida(d.lembreteData))
+        && textoAte(d.get('obs', ''), 300)
+        && nuloOuNumero(d.get('criadoEm', null));
+    }
+
+    // ---------- Família ----------
+    match /familias/{fid} {
+      // Ler: só membros. A busca "qual é a minha família" só devolve famílias com o meu e-mail.
+      allow get: if membro(fid);
+      allow list: if logadoComEmailVerificado() && meuEmail() in resource.data.emails;
+
+      // Criar: qualquer pessoa verificada pode criar a PRÓPRIA família (ela entra na lista).
+      allow create: if logadoComEmailVerificado()
+        && familiaValida(request.resource.data)
+        && request.resource.data.criadoPor == request.auth.uid
+        && request.resource.data.criadoPorEmail == meuEmail()
+        && meuEmail() in request.resource.data.emails;
+
+      // Alterar (lista de e-mails, nome): só membros; quem criou continua sendo o mesmo.
+      allow update: if membro(fid)
+        && familiaValida(request.resource.data)
+        && request.resource.data.criadoPor == resource.data.criadoPor
+        && request.resource.data.criadoPorEmail == resource.data.criadoPorEmail
+        && request.resource.data.criadoEm == resource.data.criadoEm;
+
+      // Apagar a família: só quem criou.
+      allow delete: if membro(fid) && resource.data.criadoPor == request.auth.uid;
+
+      match /veiculos/{id} {
+        allow read, delete: if membro(fid);
+        allow create, update: if membro(fid) && veiculoValido(request.resource.data);
+      }
+      match /abastecimentos/{id} {
+        allow read, delete: if membro(fid);
+        allow create, update: if membro(fid) && abastecimentoValido(request.resource.data);
+      }
+      match /manutencoes/{id} {
+        allow read, delete: if membro(fid);
+        allow create, update: if membro(fid) && manutencaoValida(request.resource.data);
+      }
+    }
+
+    // ---------- Todo o resto: negado ----------
+    match /{qualquerCoisa=**} {
+      allow read, write: if false;
+    }
+  }
+}

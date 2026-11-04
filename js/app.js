@@ -1,6 +1,6 @@
 /*
  * Controle do Carro — telas e armazenamento.
- * Os dados ficam no navegador deste aparelho (localStorage).
+ * Os dados ficam no Cloud Firestore (nuvem da família); veja js/nuvem.js e firestore.rules.
  */
 (function () {
   'use strict';
@@ -35,47 +35,113 @@
   var acoesJanela = {};
 
   // =====================================================================
-  // Armazenamento
+  // Estado e armazenamento
+  //  - modo 'nuvem': dados da família no Cloud Firestore (tempo real);
+  //  - modo 'demo' : dados inventados, só na memória deste aparelho.
+  // Preferências do aparelho (carro escolhido, lembrete de cópia) ficam no localStorage.
   // =====================================================================
-  function estadoVazio() {
-    return { versao: 1, carros: [], abastecimentos: [], manutencoes: [], carroAtual: null,
-      demo: false, ultimoBackup: null, alteracoesDesdeBackup: 0 };
-  }
-  function carregar() {
-    try {
-      var txt = localStorage.getItem(CHAVE);
-      if (!txt) return estadoVazio();
-      return normalizar(JSON.parse(txt));
-    } catch (e) {
-      return estadoVazio();
-    }
-  }
-  function normalizar(d) {
-    var e = estadoVazio();
-    if (!d || typeof d !== 'object') return e;
-    e.carros = Array.isArray(d.carros) ? d.carros : [];
-    e.abastecimentos = Array.isArray(d.abastecimentos) ? d.abastecimentos : [];
-    e.manutencoes = Array.isArray(d.manutencoes) ? d.manutencoes : [];
-    e.carroAtual = d.carroAtual || (e.carros[0] && e.carros[0].id) || null;
-    e.demo = !!d.demo;
-    e.ultimoBackup = d.ultimoBackup || null;
-    e.alteracoesDesdeBackup = d.alteracoesDesdeBackup || 0;
-    return e;
-  }
-  var estado = carregar();
+  var CHAVE_ANTIGA = 'controleCarro.v1';          // dados da versão antiga (só no aparelho)
+  var CHAVE_PREF = 'controleCarro.preferencias';
+  var COLECOES = { veiculos: 'carros', abastecimentos: 'abastecimentos', manutencoes: 'manutencoes' };
+  var CAMPOS = {
+    veiculos: ['nome', 'marca', 'modelo', 'ano', 'cor', 'oleoKm', 'oleoMeses', 'criadoEm'],
+    abastecimentos: ['carroId', 'data', 'km', 'distanciaInformada', 'litros', 'valor', 'tanqueCheio', 'combustivel', 'obs', 'criadoEm'],
+    manutencoes: ['carroId', 'tipo', 'descricao', 'data', 'km', 'valor', 'lembreteKm', 'lembreteData', 'obs', 'criadoEm']
+  };
 
+  // 'iniciando' | 'sem-config' | 'erro-carga' | 'login' | 'verificar' | 'sem-familia' | 'sem-acesso' | 'carregando-dados' | 'nuvem' | 'demo'
+  var modo = 'iniciando';
+  var usuarioAtual = null;
+  var familia = null;
+  var carregado = {};
+  var assinaturas = {};
+  var pendentes = {};
+  var redesenhoPendente = false;
+
+  function lerPrefs() {
+    try { return JSON.parse(localStorage.getItem(CHAVE_PREF)) || {}; } catch (e) { return {}; }
+  }
+  var prefs = lerPrefs();
+  function salvarPrefs() {
+    try { localStorage.setItem(CHAVE_PREF, JSON.stringify(prefs)); } catch (e) { /* sem problema */ }
+  }
+
+  function estadoVazio() {
+    return { carros: [], abastecimentos: [], manutencoes: [], carroAtual: prefs.carroAtual || null,
+      demo: false, ultimoBackup: prefs.ultimoBackup || null, alteracoesDesdeBackup: prefs.alteracoesDesdeBackup || 0 };
+  }
+  var estado = estadoVazio();
+
+  // Guarda as preferências do aparelho. (Os registros são gravados pela camada "Dados" abaixo.)
   function salvar(contarAlteracao) {
     if (contarAlteracao && !estado.demo) estado.alteracoesDesdeBackup = (estado.alteracoesDesdeBackup || 0) + 1;
-    try {
-      localStorage.setItem(CHAVE, JSON.stringify(estado));
-      return true;
-    } catch (e) {
-      alert('Não foi possível salvar os dados neste aparelho. Verifique se o navegador não está em modo anônimo e se há espaço livre.');
-      return false;
-    }
+    if (estado.demo) return true;
+    prefs.carroAtual = estado.carroAtual;
+    prefs.ultimoBackup = estado.ultimoBackup;
+    prefs.alteracoesDesdeBackup = estado.alteracoesDesdeBackup;
+    salvarPrefs();
+    return true;
   }
-  if (navigator.storage && navigator.storage.persist) {
-    try { navigator.storage.persist(); } catch (e) { /* sem problema */ }
+
+  // Só os campos permitidos pelas regras do Firestore; sem campos vazios (undefined).
+  var TAMANHOS = { nome: 40, marca: 30, modelo: 30, ano: 4, combustivel: 20, obs: 300, descricao: 60 };
+  function limpar(colecao, reg) {
+    var r = {};
+    CAMPOS[colecao].forEach(function (k) {
+      if (reg[k] === undefined) return;
+      r[k] = (TAMANHOS[k] && typeof reg[k] === 'string') ? reg[k].slice(0, TAMANHOS[k]) : reg[k];
+    });
+    if (colecao === 'veiculos') {
+      r.oleoKm = Number(r.oleoKm) || 0;
+      r.oleoMeses = r.oleoMeses ? Math.round(r.oleoMeses) : null;
+      r.ano = r.ano ? String(r.ano) : '';
+      if (!/^#[0-9a-fA-F]{6}$/.test(r.cor || '')) r.cor = CORES[0].valor;
+    }
+    return r;
+  }
+  function listaDe(colecao) { return estado[COLECOES[colecao]]; }
+  function aplicarLocal(colecao, reg) {
+    var chave = COLECOES[colecao];
+    var achou = false;
+    estado[chave] = estado[chave].map(function (x) { if (x.id === reg.id) { achou = true; return reg; } return x; });
+    if (!achou) estado[chave].push(reg);
+  }
+  function removerLocal(colecao, id) {
+    var chave = COLECOES[colecao];
+    estado[chave] = estado[chave].filter(function (x) { return x.id !== id; });
+  }
+  function acompanhar(promessa) {
+    promessa.catch(function (e) { mostrarErroNuvem(e); });
+  }
+
+  // Toda gravação passa por aqui: atualiza a tela na hora e envia para a nuvem.
+  // Sem internet, o Firestore guarda no aparelho e envia quando a conexão voltar.
+  var Dados = {
+    gravar: function (colecao, reg) {
+      aplicarLocal(colecao, reg);
+      if (modo === 'nuvem') acompanhar(Nuvem.gravar(colecao, reg.id, limpar(colecao, reg)));
+    },
+    apagar: function (colecao, id) {
+      removerLocal(colecao, id);
+      if (modo === 'nuvem') acompanhar(Nuvem.apagar(colecao, id));
+    },
+    lotes: function (ops) {
+      ops.forEach(function (op) { if (op.tipo === 'delete') removerLocal(op.colecao, op.id); else aplicarLocal(op.colecao, op.dados); });
+      if (modo === 'nuvem') {
+        acompanhar(Nuvem.emLotes(ops.map(function (op) {
+          return op.tipo === 'delete' ? op : { tipo: 'set', colecao: op.colecao, id: op.id, dados: limpar(op.colecao, op.dados) };
+        })));
+      }
+    }
+  };
+
+  function mostrarErroNuvem(e) {
+    var cod = (e && e.code) || '';
+    var msg = cod === 'permission-denied'
+      ? 'A nuvem recusou a gravação. Seu e-mail pode ter sido removido da família, ou algum dado está fora do formato esperado.'
+      : 'Não foi possível salvar na nuvem (' + esc(cod || (e && e.message) || 'erro desconhecido') + '). Confira a internet e tente de novo.';
+    abrirJanela('<div class="grande-icone" aria-hidden="true">⚠️</div><h2>Não foi salvo na nuvem</h2><p>' + msg + '</p>' +
+      '<button class="botao botao-principal" data-janela="ok">OK</button>', { ok: function () { desenhar(); } });
   }
 
   function novoId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -173,12 +239,12 @@
   // =====================================================================
   function montarMoldura(rota) {
     var carro = carroAtual();
-    var semCarro = !carro || rota === 'boas-vindas' || rota === 'escolher';
+    var semCarro = !carro || rota === 'boas-vindas' || rota === 'escolher' || rota === 'sistema';
     var emFormulario = rota === 'abastecer' || rota === 'manutencao' || rota === 'carro';
 
     if (estado.demo) {
       faixaDemo.hidden = false;
-      faixaDemo.innerHTML = '⚠️ DEMONSTRAÇÃO: estes dados são apenas um exemplo. <button type="button" data-acao="sair-demo">Apagar e começar</button>';
+      faixaDemo.innerHTML = '⚠️ DEMONSTRAÇÃO: dados de exemplo, nada é salvo. <button type="button" data-acao="sair-demo">Sair da demonstração</button>';
     } else {
       faixaDemo.hidden = true;
     }
@@ -219,13 +285,28 @@
     return { nome: p[0] || 'inicio', param: p[1] ? decodeURIComponent(p[1]) : null };
   }
 
-  function desenhar() {
+  var TELAS_SISTEMA = {
+    iniciando: telaIniciando, 'carregando-dados': telaIniciando, 'sem-config': telaSemConfig, 'erro-carga': telaErroCarga,
+    login: telaLogin, verificar: telaVerificar, 'sem-familia': telaSemFamilia, 'sem-acesso': telaSemAcesso
+  };
+
+  // manterRolagem: usado quando a tela é atualizada por dados vindos de outro celular.
+  function desenhar(manterRolagem) {
     fecharJanela();
+    redesenhoPendente = false;
+    if (TELAS_SISTEMA[modo]) {
+      montarMoldura('sistema');
+      atualizarIndicador();
+      TELAS_SISTEMA[modo]();
+      window.scrollTo(0, 0);
+      return;
+    }
     var r = rotaAtual();
     var nome = r.nome;
+    var livre = nome === 'ajuda' || (nome === 'familia' && !estado.demo);
 
-    if (!estado.carros.length && nome !== 'ajuda') nome = 'boas-vindas';
-    else if (estado.carros.length > 1 && !sessao.escolheuCarro && nome !== 'ajuda') nome = 'escolher';
+    if (!estado.carros.length && !livre) nome = 'boas-vindas';
+    else if (estado.carros.length > 1 && !sessao.escolheuCarro && !livre) nome = 'escolher';
     else if (nome === 'escolher' && estado.carros.length < 2) nome = 'inicio';
     if (estado.carros.length && estado.carros.length < 2) sessao.escolheuCarro = true;
 
@@ -233,12 +314,12 @@
     var telas = {
       'boas-vindas': telaBoasVindas, escolher: telaEscolher, inicio: telaInicio,
       abastecer: telaAbastecer, manutencao: telaManutencao, historico: telaHistorico,
-      relatorios: telaRelatorios, ajustes: telaAjustes, carro: telaCarro, ajuda: telaAjuda
+      relatorios: telaRelatorios, ajustes: telaAjustes, carro: telaCarro, ajuda: telaAjuda, familia: telaFamilia
     };
     (telas[nome] || telaInicio)(r.param);
-    window.scrollTo(0, 0);
+    if (manterRolagem !== true) window.scrollTo(0, 0);
   }
-  window.addEventListener('hashchange', desenhar);
+  window.addEventListener('hashchange', function () { desenhar(); });
 
   // Cliques gerais
   document.addEventListener('click', function (ev) {
@@ -255,6 +336,8 @@
     else if (acao === 'restaurar') escolherArquivoRestaurar();
     else if (acao === 'planilha') exportarPlanilha();
     else if (acao === 'demo') carregarDemo();
+    else if (acao === 'sair-conta') sairDaConta();
+    else if (acao === 'importar-antigos') importarAntigos();
   });
 
   // =====================================================================
@@ -274,22 +357,24 @@
       '<div id="erros-inicio"></div>' +
       '<button class="botao botao-principal botao-grande" type="submit">Começar</button>' +
       '</form></div>' +
-      '<div class="cartao"><h2>Quer ver um exemplo antes?</h2>' +
-      '<p>Mostramos o aplicativo com dados inventados, só para conhecer. Depois é só apagar.</p>' +
-      '<button class="botao botao-secundario" type="button" data-acao="demo">Ver demonstração</button></div>' +
-      '<div class="cartao"><h2>Já usava em outro celular?</h2>' +
-      '<p>Se você tem uma cópia de segurança (arquivo salvo pelo aplicativo), pode trazê-la para cá.</p>' +
-      '<button class="botao botao-secundario" type="button" data-acao="restaurar">Restaurar cópia de segurança</button></div>' +
-      '<p class="legenda-simples">Os dados ficam guardados somente neste aparelho. <a href="#ajuda">Saiba mais</a>.</p>';
+      (dadosAntigosDoAparelho() ? '<div class="cartao"><h2>Já usava o aplicativo neste celular?</h2>' +
+        '<p>Encontramos registros da versão antiga guardados neste aparelho. Você pode enviá-los para a nuvem.</p>' +
+        '<button class="botao botao-principal" type="button" data-acao="importar-antigos">Enviar registros antigos para a nuvem</button></div>' : '') +
+      '<div class="cartao"><h2>Tem uma cópia de segurança?</h2>' +
+      '<p>Se você tem um arquivo de cópia salvo pelo aplicativo, pode trazê-lo para cá.</p>' +
+      '<button class="botao botao-secundario" type="button" data-acao="restaurar">Usar cópia de segurança</button></div>' +
+      '<div class="cartao"><h2>Pessoas com acesso</h2><p>Autorize os e-mails da família para que todos vejam os mesmos dados.</p>' +
+      '<a class="botao botao-secundario" href="#familia">Pessoas com acesso</a></div>' +
+      '<p class="legenda-simples"><a href="#ajuda">Ajuda</a> • <button type="button" class="link-botao" data-acao="sair-conta">Sair da conta</button></p>';
 
     $('#form-inicio').addEventListener('submit', function (ev) {
       ev.preventDefault();
       var n1 = $('#nome1').value.trim(), n2 = $('#nome2').value.trim();
       if (!n1) { $('#erros-inicio').innerHTML = caixa('erro', 'Escreva o nome do primeiro carro.'); return; }
-      estado = estadoVazio();
-      estado.carros.push(novoCarro(n1, CORES[0].valor));
-      if (n2) estado.carros.push(novoCarro(n2, CORES[1].valor));
-      estado.carroAtual = estado.carros[0].id;
+      var novos = [novoCarro(n1, CORES[0].valor)];
+      if (n2) { novos.push(novoCarro(n2, CORES[1].valor)); novos[1].criadoEm = novos[0].criadoEm + 1; }
+      Dados.lotes(novos.map(function (c) { return { tipo: 'set', colecao: 'veiculos', id: c.id, dados: c }; }));
+      estado.carroAtual = novos[0].id;
       salvar();
       sessao.escolheuCarro = estado.carros.length < 2;
       aviso('Tudo pronto! ✔', 'Agora registre a <strong>última troca de óleo</strong> de cada carro (em Registrar manutenção) para receber os avisos da próxima troca.', function () {
@@ -299,7 +384,7 @@
   }
 
   function novoCarro(nome, cor) {
-    return { id: novoId(), nome: nome, marca: '', modelo: '', ano: '', cor: cor, oleoKm: 5000, oleoMeses: null };
+    return { id: novoId(), nome: nome, marca: '', modelo: '', ano: '', cor: cor, oleoKm: 5000, oleoMeses: null, criadoEm: Date.now() };
   }
 
   // =====================================================================
@@ -358,6 +443,11 @@
     var proxima = r.lembretes.filter(function (l) { return l.situacao !== 'semDados'; })[0];
 
     var h = '';
+    if (!estado.demo && dadosAntigosDoAparelho()) {
+      h += '<div class="caixa caixa-info"><strong>Registros antigos neste celular</strong>' +
+        '<p style="margin:6px 0 10px">Encontramos registros da versão antiga do aplicativo guardados só neste aparelho. Envie para a nuvem para não perdê-los.</p>' +
+        '<button class="botao botao-principal botao-pequeno" type="button" data-acao="importar-antigos">Enviar para a nuvem</button></div>';
+    }
     urgentes.forEach(function (l) { h += htmlLembrete(l); });
 
     h += '<a class="botao botao-carro botao-grande" href="#abastecer"><span class="icone" aria-hidden="true">⛽</span> Registrar abastecimento</a>';
@@ -403,9 +493,9 @@
     // Lembrete de cópia de segurança
     var temDados = r.abastecimentos.length + r.manutencoes.length > 0;
     var diasSemBackup = estado.ultimoBackup ? C.diasEntre(estado.ultimoBackup.slice(0, 10), hoje) : null;
-    if (!estado.demo && temDados && (estado.alteracoesDesdeBackup >= 10 || (diasSemBackup !== null && diasSemBackup > 30 && estado.alteracoesDesdeBackup > 0))) {
+    if (!estado.demo && temDados && (estado.alteracoesDesdeBackup >= 20 || (diasSemBackup !== null && diasSemBackup > 60 && estado.alteracoesDesdeBackup > 0))) {
       h += '<div class="caixa caixa-info"><strong>Lembrete: salve uma cópia de segurança</strong>' +
-        '<p style="margin:6px 0 10px">Os dados ficam só neste celular. Uma cópia evita perder tudo se o celular quebrar ou for trocado.</p>' +
+        '<p style="margin:6px 0 10px">Os dados estão na nuvem, mas uma cópia guardada com você protege contra apagar algo sem querer.</p>' +
         '<button class="botao botao-secundario botao-pequeno" type="button" data-acao="backup">Salvar cópia agora</button></div>';
     }
 
@@ -544,15 +634,9 @@
         combustivel: ($('input[name=combustivel]:checked') || {}).value || '',
         obs: $('#obs').value.trim(), criadoEm: reg ? reg.criadoEm : Date.now()
       };
-      if (estado.demo) registro.demo = true;
-
       var gravar = function () {
-        if (reg) {
-          estado.abastecimentos = estado.abastecimentos.map(function (a) { return a.id === reg.id ? registro : a; });
-        } else {
-          estado.abastecimentos.push(registro);
-        }
-        if (!salvar(true)) return;
+        Dados.gravar('abastecimentos', registro);
+        salvar(true);
         mostrarResultadoAbastecimento(registro, !!reg);
       };
       if (v.avisos.length) confirmarAvisos(v.avisos, gravar);
@@ -617,7 +701,7 @@
         ', no carro <strong>' + esc((carroPorId(a.carroId) || {}).nome) + '</strong>.<br>Isso não pode ser desfeito.',
       sim: 'Sim, apagar', nao: 'Não, manter',
       aoConfirmar: function () {
-        estado.abastecimentos = estado.abastecimentos.filter(function (x) { return x.id !== id; });
+        Dados.apagar('abastecimentos', id);
         salvar(true);
         aviso('Apagado', 'O abastecimento foi apagado.', function () {
           if (rotaAtual().nome === 'historico') desenhar(); else ir('historico', true);
@@ -742,12 +826,9 @@
 
       var registro = Object.assign({ id: reg ? reg.id : novoId(), carroId: carro.id, obs: $('#obs').value.trim(),
         criadoEm: reg ? reg.criadoEm : Date.now() }, dados);
-      if (estado.demo) registro.demo = true;
-
       var gravar = function () {
-        if (reg) estado.manutencoes = estado.manutencoes.map(function (m) { return m.id === reg.id ? registro : m; });
-        else estado.manutencoes.push(registro);
-        if (!salvar(true)) return;
+        Dados.gravar('manutencoes', registro);
+        salvar(true);
         var res = resumoCarro(carro);
         var lemb = res.lembretes.filter(function (l) { return l.ultima && l.ultima.id === registro.id; })[0];
         var itens = ['📅 ' + C.fmtData(registro.data) + ' com ' + C.fmtKm(registro.km) + (registro.valor ? ' • ' + C.fmtDinheiro(registro.valor) : '')];
@@ -773,7 +854,7 @@
         esc((carroPorId(m.carroId) || {}).nome) + '</strong>.<br>Isso não pode ser desfeito.',
       sim: 'Sim, apagar', nao: 'Não, manter',
       aoConfirmar: function () {
-        estado.manutencoes = estado.manutencoes.filter(function (x) { return x.id !== id; });
+        Dados.apagar('manutencoes', id);
         salvar(true);
         aviso('Apagada', 'A manutenção foi apagada.', function () {
           if (rotaAtual().nome === 'historico') desenhar(); else ir('historico', true);
@@ -1049,32 +1130,42 @@
     if (estado.carros.length > 1) h += '<button class="botao botao-secundario" type="button" data-acao="trocar-carro">🔁 Trocar o carro que estou vendo</button>';
     h += '<p class="legenda-simples">Nos dados de cada carro você também muda o intervalo da troca de óleo.</p></div>';
 
+    if (!estado.demo) {
+      h += '<div class="cartao"><h2>👪 Família</h2>' +
+        '<p>Conectado como <strong>' + esc(usuarioAtual && usuarioAtual.email) + '</strong>.</p>' +
+        '<a class="botao botao-secundario" href="#familia">Pessoas com acesso</a>' +
+        '<button class="botao botao-secundario" type="button" data-acao="sair-conta">Sair da conta</button></div>';
+    }
     h += '<div class="cartao"><h2>💾 Cópia de segurança</h2>' +
-      '<p>Os dados ficam guardados <strong>somente neste celular, neste navegador</strong>. Não vão para a internet e não aparecem em outro aparelho.</p>' +
-      '<p>Salve uma cópia de vez em quando. Você pode enviá-la para si mesmo pelo WhatsApp ou e-mail, ou guardar no Google Drive.</p>' +
+      (estado.demo ? '<p>Na demonstração os dados ficam só na memória deste aparelho.</p>' :
+        '<p>Os dados ficam guardados na nuvem da família (Firebase) e aparecem em todos os celulares autorizados.</p>' +
+        '<p>Mesmo assim, salve uma cópia de vez em quando: ela protege contra apagar algo sem querer. Você pode enviá-la para si mesmo pelo WhatsApp, e-mail ou Google Drive.</p>') +
       (estado.ultimoBackup ? '<p class="legenda-simples">Última cópia: ' + C.fmtData(estado.ultimoBackup.slice(0, 10)) + '</p>' : '<p class="legenda-simples">Nenhuma cópia salva ainda.</p>') +
       '<button class="botao botao-principal" type="button" data-acao="backup">Salvar cópia de segurança</button>' +
-      '<button class="botao botao-secundario" type="button" data-acao="restaurar">Restaurar uma cópia</button>' +
+      '<button class="botao botao-secundario" type="button" data-acao="restaurar">Usar uma cópia de segurança</button>' +
+      (dadosAntigosDoAparelho() && !estado.demo ? '<button class="botao botao-secundario" type="button" data-acao="importar-antigos">Enviar registros antigos deste aparelho</button>' : '') +
       '<button class="botao botao-secundario" type="button" data-acao="planilha">Exportar planilha (Excel)</button></div>';
 
     h += '<div class="cartao"><h2>❓ Ajuda</h2><a class="botao botao-secundario" href="#ajuda">Como usar e como os cálculos são feitos</a></div>';
 
     h += '<div class="cartao"><h2>Apagar dados</h2>';
-    if (estado.demo) h += '<button class="botao botao-perigo" type="button" data-acao="sair-demo">Apagar a demonstração e começar</button>';
-    h += '<button class="botao botao-perigo" type="button" id="apagar-tudo">Apagar todos os dados deste aparelho</button></div>';
+    if (estado.demo) h += '<button class="botao botao-perigo" type="button" data-acao="sair-demo">Sair da demonstração</button>';
+    else h += '<button class="botao botao-perigo" type="button" id="apagar-tudo">Apagar todos os carros e registros</button>';
+    h += '</div>';
     tela.innerHTML = h;
 
-    $('#apagar-tudo').addEventListener('click', function () {
+    if ($('#apagar-tudo')) $('#apagar-tudo').addEventListener('click', function () {
       confirmar({
         icone: '⚠️', titulo: 'Apagar TODOS os dados?', perigo: true,
-        texto: 'Todos os carros, abastecimentos e manutenções serão apagados deste aparelho. Isso não pode ser desfeito.<br><br>Se quiser, salve antes uma cópia de segurança.',
+        texto: 'Todos os carros, abastecimentos e manutenções da família serão apagados <strong>em todos os celulares</strong>. Isso não pode ser desfeito.<br><br>Se quiser, salve antes uma cópia de segurança.',
         sim: 'Continuar', nao: 'Não, manter',
         aoConfirmar: function () {
           confirmar({
             titulo: 'Tem certeza mesmo?', perigo: true, texto: 'Última confirmação.',
             sim: 'Sim, apagar tudo', nao: 'Cancelar',
             aoConfirmar: function () {
-              estado = estadoVazio(); salvar(); sessao.escolheuCarro = false; ir('inicio', true);
+              Dados.lotes(operacoesApagarTudo());
+              sessao.escolheuCarro = false; ir('inicio', true);
             }
           });
         }
@@ -1129,13 +1220,9 @@
       if (erros.length) return mostrarErros(erros);
       var dados = { nome: nome, marca: $('#marca').value.trim(), modelo: $('#modelo').value.trim(), ano: ano,
         cor: ($('input[name=cor]:checked') || {}).value || c.cor, oleoKm: oleoKm || 0, oleoMeses: oleoMeses || null };
-      if (novo) {
-        var carroNovo = Object.assign(c, dados);
-        estado.carros.push(carroNovo);
-        estado.carroAtual = carroNovo.id;
-      } else {
-        Object.assign(c, dados);
-      }
+      var atualizado = Object.assign({}, c, dados);
+      Dados.gravar('veiculos', atualizado);
+      if (novo) estado.carroAtual = atualizado.id;
       salvar();
       aviso('Salvo! ✔', novo ? 'O carro <strong>' + esc(nome) + '</strong> foi adicionado e agora está selecionado.' : 'Os dados do carro foram atualizados.', function () { ir(novo ? 'inicio' : 'ajustes', true); });
     });
@@ -1147,10 +1234,12 @@
         texto: 'Serão apagados também ' + C.plural(nA, 'abastecimento', 'abastecimentos') + ' e ' + C.plural(nM, 'manutenção', 'manutenções') + ' deste carro. Isso não pode ser desfeito.',
         sim: 'Sim, remover', nao: 'Não, manter',
         aoConfirmar: function () {
-          estado.carros = estado.carros.filter(function (x) { return x.id !== c.id; });
-          estado.abastecimentos = estado.abastecimentos.filter(function (x) { return x.carroId !== c.id; });
-          estado.manutencoes = estado.manutencoes.filter(function (x) { return x.carroId !== c.id; });
-          estado.carroAtual = estado.carros[0].id;
+          var ops = [];
+          abastDoCarro(c.id).forEach(function (x) { ops.push({ tipo: 'delete', colecao: 'abastecimentos', id: x.id }); });
+          manutDoCarro(c.id).forEach(function (x) { ops.push({ tipo: 'delete', colecao: 'manutencoes', id: x.id }); });
+          ops.push({ tipo: 'delete', colecao: 'veiculos', id: c.id });
+          Dados.lotes(ops);
+          estado.carroAtual = estado.carros[0] ? estado.carros[0].id : null;
           salvar();
           ir('inicio', true);
         }
@@ -1163,7 +1252,7 @@
   // =====================================================================
   function telaAjuda() {
     tela.innerHTML = '<div class="texto-ajuda"><h1>Ajuda</h1>' +
-      (estado.carros.length ? '' : '<p><a href="#inicio">← Voltar</a></p>') +
+      '<p><button type="button" class="link-botao" data-acao="voltar">← Voltar</button></p>' +
       '<div class="cartao"><h2>Como usar</h2>' +
       '<p><strong>1.</strong> Toda vez que abastecer, toque em <strong>Registrar abastecimento</strong> e preencha: quilometragem do painel, litros e valor pago (estão na nota).</p>' +
       '<p><strong>2.</strong> Quando fizer troca de óleo, pneus ou outro serviço, toque em <strong>Registrar manutenção</strong>.</p>' +
@@ -1171,8 +1260,10 @@
       '<p><strong>4.</strong> Confira sempre o nome do carro no topo colorido da tela antes de salvar.</p>' +
       '<p><strong>Dica:</strong> para abrir mais rápido, adicione este aplicativo à tela inicial do celular (no menu do navegador, toque em “Adicionar à tela inicial”).</p></div>' +
       '<div class="cartao"><h2>Onde ficam os dados?</h2>' +
-      '<p>Somente neste celular, dentro do navegador. Nada é enviado para a internet. Se o celular for trocado, formatado, ou se os dados do navegador forem limpos, os registros se perdem — por isso salve uma <strong>cópia de segurança</strong> em Ajustes de vez em quando.</p>' +
-      '<p>Se duas pessoas usam celulares diferentes, cada celular tem os seus próprios dados. Para passar os dados de um para outro, salve a cópia em um e restaure no outro.</p></div>' +
+      '<p>Na <strong>nuvem da família</strong> (Google Firebase). Todos os celulares autorizados veem os mesmos dados, e o que um registra aparece no outro em poucos segundos.</p>' +
+      '<p>Só entram as pessoas cujo e-mail está em <strong>Ajustes → Pessoas com acesso</strong>.</p>' +
+      '<p>Sem internet o aplicativo continua funcionando: os registros ficam guardados no celular e são enviados quando a conexão voltar.</p>' +
+      '<p>Mesmo assim, salve uma <strong>cópia de segurança</strong> de vez em quando (Ajustes): ela protege contra apagar algo sem querer.</p></div>' +
       '<div class="cartao"><h2>Como os cálculos são feitos</h2>' +
       '<h3>Preço por litro</h3><div class="formula">valor pago ÷ litros</div>' +
       '<h3>Km rodados</h3><div class="formula">quilometragem deste abastecimento − quilometragem do abastecimento anterior</div>' +
@@ -1192,11 +1283,10 @@
   }
 
   // =====================================================================
-  // Cópia de segurança, restauração e planilha
+  // Cópia de segurança, importação, restauração e planilha
   // =====================================================================
   function nomeArquivo(prefixo, ext) {
-    var d = C.hojeISO();
-    return prefixo + '-' + d + '.' + ext;
+    return prefixo + '-' + C.hojeISO() + '.' + ext;
   }
   function entregarArquivo(conteudo, nome, tipo, aoTerminar) {
     var blob = new Blob([conteudo], { type: tipo });
@@ -1218,14 +1308,163 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
   }
 
+  // Cópia no mesmo formato da versão antiga (versão 1), para poder ser usada em qualquer versão.
+  function dadosParaCopia() {
+    function lista(col) { return listaDe(col).map(function (x) { var r = limpar(col, x); r.id = x.id; return r; }); }
+    return { carros: lista('veiculos'), abastecimentos: lista('abastecimentos'), manutencoes: lista('manutencoes') };
+  }
   function fazerBackup() {
-    var conteudo = JSON.stringify({ aplicativo: 'controle-do-carro', versao: 1, criadoEm: new Date().toISOString(), dados: estado }, null, 1);
+    var conteudo = JSON.stringify({ aplicativo: 'controle-do-carro', versao: 2, criadoEm: new Date().toISOString(), dados: dadosParaCopia() }, null, 1);
     entregarArquivo(conteudo, nomeArquivo('copia-controle-carro', 'json'), 'application/json', function () {
       estado.ultimoBackup = new Date().toISOString();
       estado.alteracoesDesdeBackup = 0;
       salvar();
-      aviso('Cópia de segurança pronta ✔', 'Guarde o arquivo em um lugar seguro (por exemplo, envie para você mesmo no WhatsApp ou e-mail). Para trazer os dados de volta, use “Restaurar uma cópia”.', function () { desenhar(); });
+      aviso('Cópia de segurança pronta ✔', 'Guarde o arquivo em um lugar seguro (por exemplo, envie para você mesmo no WhatsApp ou e-mail). Ele contém os dados dos carros: não publique em lugares públicos.', function () { desenhar(); });
     });
+  }
+
+  // Confere um registro com as mesmas regras do Firestore (um registro inválido faria a nuvem recusar o lote todo).
+  function registroValido(col, r) {
+    var data = /^\d{4}-\d{2}-\d{2}$/;
+    if (!r || typeof r.id !== 'string' || !r.id || r.id.length > 128 || r.id.indexOf('/') >= 0) return false;
+    if (col === 'veiculos') return typeof r.nome === 'string' && r.nome.trim().length > 0;
+    if (typeof r.carroId !== 'string' || !data.test(r.data || '') || typeof r.km !== 'number' || !(r.km >= 0)) return false;
+    if (col === 'abastecimentos') return r.litros > 0 && r.litros < 1000 && r.valor > 0 && r.valor < 100000;
+    return TIPOS_ORDEM.indexOf(r.tipo) >= 0;
+  }
+
+  // Lê uma cópia de segurança (da versão antiga ou da nova). Dados de demonstração são ignorados.
+  function lerCopia(d) {
+    if (!d || d.aplicativo !== 'controle-do-carro' || !d.dados || !Array.isArray(d.dados.carros)) return null;
+    if (d.dados.demo) return { demo: true };
+    function lista(x, col) {
+      return (Array.isArray(x) ? x : []).filter(function (r) { return r && typeof r === 'object' && !r.demo && registroValido(col, r); });
+    }
+    return {
+      carros: lista(d.dados.carros, 'veiculos'),
+      abastecimentos: lista(d.dados.abastecimentos, 'abastecimentos'),
+      manutencoes: lista(d.dados.manutencoes, 'manutencoes'),
+      criadoEm: d.criadoEm || null
+    };
+  }
+
+  // Registros da versão antiga (que guardava tudo só no aparelho).
+  function dadosAntigosDoAparelho() {
+    if (prefs.antigosImportados) return null;
+    var bruto;
+    try { bruto = JSON.parse(localStorage.getItem(CHAVE_ANTIGA)); } catch (e) { return null; }
+    if (!bruto) return null;
+    var d = lerCopia({ aplicativo: 'controle-do-carro', dados: bruto });
+    if (!d || d.demo || !d.carros.length || (!d.abastecimentos.length && !d.manutencoes.length)) return null;
+    return d;
+  }
+  function importarAntigos() {
+    var d = dadosAntigosDoAparelho();
+    if (!d) { aviso('Nada para enviar', 'Não há registros antigos neste aparelho.'); return; }
+    importarJuntando(d, function () { prefs.antigosImportados = true; salvarPrefs(); });
+  }
+
+  function contar(lista, carroId) { return lista.filter(function (r) { return r.carroId === carroId; }).length; }
+
+  // Junta os dados de uma cópia com os da nuvem. Os registros mantêm o mesmo identificador:
+  // importar duas vezes NÃO duplica nada.
+  function importarJuntando(dados, aoTerminar) {
+    var mapa = {}, criar = [], semDestino = [];
+    dados.carros.forEach(function (c) {
+      var igual = carroPorId(c.id) || estado.carros.filter(function (x) {
+        return x.nome.trim().toLowerCase() === String(c.nome).trim().toLowerCase();
+      })[0];
+      if (igual) { mapa[c.id] = igual.id; return; }
+      // Já importado antes? Usa o carro para onde foram os mesmos registros.
+      var jaNaNuvem = null;
+      ['abastecimentos', 'manutencoes'].forEach(function (col) {
+        dados[col].forEach(function (r) {
+          if (jaNaNuvem || r.carroId !== c.id) return;
+          var existente = listaDe(col).filter(function (x) { return x.id === r.id; })[0];
+          if (existente && carroPorId(existente.carroId)) jaNaNuvem = existente.carroId;
+        });
+      });
+      if (jaNaNuvem) mapa[c.id] = jaNaNuvem; else semDestino.push(c);
+    });
+
+    function perguntar(i) {
+      if (i >= semDestino.length) return concluir();
+      var c = semDestino[i];
+      var vagas = MAX_CARROS - estado.carros.length - criar.length;
+      var acoes = { pular: function () { perguntar(i + 1); } };
+      var botoes = '';
+      if (vagas > 0) {
+        acoes.novo = function () { criar.push(c); mapa[c.id] = c.id; perguntar(i + 1); };
+        botoes += '<button class="botao botao-principal" data-janela="novo">Criar como carro novo</button>';
+      }
+      estado.carros.forEach(function (x, k) {
+        acoes['c' + k] = function () { mapa[c.id] = x.id; perguntar(i + 1); };
+        botoes += '<button class="botao botao-secundario" data-janela="c' + k + '">Juntar com 🚗 ' + esc(x.nome) + '</button>';
+      });
+      botoes += '<button class="botao botao-perigo" data-janela="pular">Não trazer este carro</button>';
+      abrirJanela('<h2>Para qual carro vão estes registros?</h2><p>Na cópia existe o carro <strong>' + esc(c.nome) + '</strong> com ' +
+        C.plural(contar(dados.abastecimentos, c.id), 'abastecimento', 'abastecimentos') + ' e ' +
+        C.plural(contar(dados.manutencoes, c.id), 'manutenção', 'manutenções') + '.</p>' + botoes, acoes);
+    }
+
+    function concluir() {
+      var ops = [], qtd = { abastecimentos: 0, manutencoes: 0 };
+      criar.forEach(function (c) {
+        ops.push({ tipo: 'set', colecao: 'veiculos', id: c.id, dados: Object.assign({ oleoKm: 5000, cor: CORES[estado.carros.length % CORES.length].valor, criadoEm: Date.now() }, c) });
+      });
+      ['abastecimentos', 'manutencoes'].forEach(function (col) {
+        dados[col].forEach(function (r) {
+          if (!mapa[r.carroId]) return;
+          ops.push({ tipo: 'set', colecao: col, id: r.id, dados: Object.assign({}, r, { carroId: mapa[r.carroId] }) });
+          qtd[col]++;
+        });
+      });
+      if (!qtd.abastecimentos && !qtd.manutencoes && !criar.length) { aviso('Nada para trazer', 'Nenhum registro foi escolhido para importar.'); return; }
+      confirmar({
+        icone: '📥', titulo: 'Trazer estes registros?',
+        texto: C.plural(qtd.abastecimentos, 'abastecimento', 'abastecimentos') + ' e ' + C.plural(qtd.manutencoes, 'manutenção', 'manutenções') +
+          (criar.length ? ', e ' + C.plural(criar.length, 'carro novo', 'carros novos') : '') +
+          '.<br>Registros que já estão na nuvem não serão duplicados. Nada será apagado.',
+        sim: 'Sim, trazer', nao: 'Cancelar',
+        aoConfirmar: function () {
+          Dados.lotes(ops);
+          if (aoTerminar) aoTerminar();
+          if (!estado.carroAtual || !carroPorId(estado.carroAtual)) estado.carroAtual = estado.carros[0] && estado.carros[0].id;
+          salvar();
+          if (estado.carros.length < 2) sessao.escolheuCarro = true;
+          aviso('Registros trazidos ✔', 'Os registros já aparecem no aplicativo' + (modo === 'nuvem' ? ' e em todos os celulares da família.' : '.'), function () { ir('inicio', true); });
+        }
+      });
+    }
+    perguntar(0);
+  }
+
+  function operacoesApagarTudo() {
+    var ops = [];
+    ['abastecimentos', 'manutencoes', 'veiculos'].forEach(function (col) {
+      listaDe(col).forEach(function (x) { ops.push({ tipo: 'delete', colecao: col, id: x.id }); });
+    });
+    return ops;
+  }
+
+  // Substitui tudo pelos dados da cópia (apaga o que não estiver nela).
+  function substituirTudo(dados) {
+    var carros = dados.carros.slice(0, MAX_CARROS);
+    var ids = {}, ops = [];
+    carros.forEach(function (c) { ids['veiculos/' + c.id] = true; ops.push({ tipo: 'set', colecao: 'veiculos', id: c.id, dados: Object.assign({ oleoKm: 5000, criadoEm: Date.now() }, c) }); });
+    ['abastecimentos', 'manutencoes'].forEach(function (col) {
+      dados[col].forEach(function (r) {
+        if (!ids['veiculos/' + r.carroId]) return;
+        ids[col + '/' + r.id] = true;
+        ops.push({ tipo: 'set', colecao: col, id: r.id, dados: r });
+      });
+    });
+    var apagar = operacoesApagarTudo().filter(function (op) { return !ids[op.colecao + '/' + op.id]; });
+    Dados.lotes(apagar.concat(ops));
+    estado.carroAtual = carros[0] && carros[0].id;
+    salvar();
+    sessao.escolheuCarro = false;
+    aviso('Cópia aplicada ✔', 'Os dados agora são os da cópia de segurança.', function () { ir('inicio', true); });
   }
 
   function escolherArquivoRestaurar() {
@@ -1237,26 +1476,28 @@
       if (!f) return;
       var leitor = new FileReader();
       leitor.onload = function () {
-        var d;
-        try { d = JSON.parse(leitor.result); } catch (e) { d = null; }
-        if (!d || d.aplicativo !== 'controle-do-carro' || !d.dados || !Array.isArray(d.dados.carros)) {
-          aviso('Arquivo não reconhecido', 'Este arquivo não é uma cópia de segurança do Controle do Carro.');
-          return;
-        }
-        var novo = normalizar(d.dados);
-        confirmar({
-          icone: '📥', titulo: 'Restaurar esta cópia?',
-          texto: 'Cópia de ' + (d.criadoEm ? C.fmtData(d.criadoEm.slice(0, 10)) : 'data desconhecida') + ' com ' +
-            C.plural(novo.carros.length, 'carro', 'carros') + ', ' + C.plural(novo.abastecimentos.length, 'abastecimento', 'abastecimentos') +
-            ' e ' + C.plural(novo.manutencoes.length, 'manutenção', 'manutenções') + '.<br><br><strong>Os dados atuais deste aparelho serão substituídos.</strong>',
-          sim: 'Sim, restaurar', nao: 'Cancelar', perigo: true,
-          aoConfirmar: function () {
-            estado = novo;
-            estado.ultimoBackup = d.criadoEm || null;
-            estado.alteracoesDesdeBackup = 0;
-            salvar();
-            sessao.escolheuCarro = false;
-            aviso('Dados restaurados ✔', 'Os registros da cópia foram carregados neste aparelho.', function () { ir('inicio', true); });
+        var bruto;
+        try { bruto = JSON.parse(leitor.result); } catch (e) { bruto = null; }
+        var d = lerCopia(bruto);
+        if (!d) { aviso('Arquivo não reconhecido', 'Este arquivo não é uma cópia de segurança do Controle do Carro.'); return; }
+        if (d.demo) { aviso('Cópia de demonstração', 'Este arquivo contém só os dados de exemplo da demonstração. Nada foi importado.'); return; }
+        var resumo = 'Cópia de ' + (d.criadoEm ? C.fmtData(String(d.criadoEm).slice(0, 10)) : 'data desconhecida') + ' com ' +
+          C.plural(d.carros.length, 'carro', 'carros') + ', ' + C.plural(d.abastecimentos.length, 'abastecimento', 'abastecimentos') +
+          ' e ' + C.plural(d.manutencoes.length, 'manutenção', 'manutenções') + '.';
+        if (!estado.carros.length) { importarJuntando(d); return; }
+        abrirJanela('<div class="grande-icone" aria-hidden="true">📥</div><h2>Usar esta cópia</h2><p>' + resumo + '</p>' +
+          '<button class="botao botao-principal" data-janela="juntar">Juntar com os dados atuais (recomendado)</button>' +
+          '<p class="legenda-simples">Traz o que está na cópia sem apagar nada. Não duplica registros.</p>' +
+          '<button class="botao botao-perigo" data-janela="substituir">Substituir tudo pela cópia</button>' +
+          '<p class="legenda-simples">Apaga o que não estiver na cópia' + (modo === 'nuvem' ? ', em todos os celulares da família' : '') + '.</p>' +
+          '<button class="botao botao-secundario" data-janela="cancelar">Cancelar</button>', {
+          juntar: function () { importarJuntando(d); },
+          substituir: function () {
+            confirmar({
+              icone: '⚠️', titulo: 'Substituir tudo?', perigo: true,
+              texto: 'Os carros e registros atuais que não estão na cópia serão <strong>apagados</strong>. Isso não pode ser desfeito.',
+              sim: 'Sim, substituir', nao: 'Cancelar', aoConfirmar: function () { substituirTudo(d); }
+            });
           }
         });
       };
@@ -1290,29 +1531,375 @@
   }
 
   // =====================================================================
-  // Demonstração
+  // Demonstração (só na memória deste aparelho; nunca vai para a nuvem)
   // =====================================================================
   function carregarDemo() {
-    estado = window.DadosDemo ? window.DadosDemo.gerar(C, novoId) : estadoVazio();
-    salvar();
+    if (window.Nuvem && nuvemPronta) Nuvem.pararDeOuvir();
+    var d = window.DadosDemo.gerar(C, novoId);
+    estado = estadoVazio();
+    estado.carros = d.carros; estado.abastecimentos = d.abastecimentos; estado.manutencoes = d.manutencoes;
+    estado.carroAtual = d.carroAtual; estado.demo = true;
+    modo = 'demo';
     sessao.escolheuCarro = false;
     ir('escolher', true);
   }
   function sairDemo() {
     confirmar({
-      icone: '🧹', titulo: 'Apagar a demonstração?',
-      texto: 'Todos os dados de exemplo serão apagados e você começa do zero com os seus carros.' +
-        (estado.abastecimentos.concat(estado.manutencoes).some(function (x) { return !x.demo; }) ? '<br><strong>Atenção: os registros que você fez durante a demonstração também serão apagados.</strong>' : ''),
-      sim: 'Sim, apagar e começar', nao: 'Continuar vendo',
-      aoConfirmar: function () { estado = estadoVazio(); salvar(); sessao.escolheuCarro = false; ir('inicio', true); }
+      icone: '🧹', titulo: 'Sair da demonstração?',
+      texto: 'Os dados de exemplo serão descartados. Nada da demonstração vai para a nuvem.',
+      sim: 'Sim, sair', nao: 'Continuar vendo',
+      aoConfirmar: function () {
+        estado = estadoVazio(); sessao.escolheuCarro = false;
+        modo = nuvemPronta ? 'login' : 'sem-config';
+        if (location.hash !== '#inicio') location.replace('#inicio');
+        if (nuvemPronta) decidirPorUsuario(); else desenhar();
+      }
     });
+  }
+
+  // =====================================================================
+  // Login, verificação de e-mail e família
+  // =====================================================================
+  var nuvemPronta = false;
+  var erroCarga = null;
+
+  function emailDoUsuario() { return usuarioAtual && usuarioAtual.email ? usuarioAtual.email.toLowerCase() : ''; }
+
+  function mensagemErro(e) {
+    var c = (e && e.code) || '';
+    var m = {
+      'auth/invalid-credential': 'E-mail ou senha incorretos.',
+      'auth/wrong-password': 'E-mail ou senha incorretos.',
+      'auth/user-not-found': 'E-mail ou senha incorretos.',
+      'auth/invalid-email': 'O e-mail não parece correto. Confira se digitou certo.',
+      'auth/missing-password': 'Digite a senha.',
+      'auth/too-many-requests': 'Muitas tentativas. Espere alguns minutos e tente de novo.',
+      'auth/network-request-failed': 'Sem internet. Confira a conexão e tente de novo.',
+      'auth/popup-blocked': 'O navegador bloqueou a janela do Google. Permita janelas (pop-ups) para este site, ou entre com e-mail e senha.',
+      'auth/popup-closed-by-user': 'A janela do Google foi fechada antes de terminar.',
+      'auth/cancelled-popup-request': 'A janela do Google foi fechada antes de terminar.',
+      'auth/unauthorized-domain': 'Este endereço ainda não foi autorizado no Firebase (Authentication → Settings → Authorized domains).',
+      'auth/operation-not-allowed': 'Este tipo de login não foi ativado no Firebase.',
+      'auth/user-disabled': 'Esta conta foi desativada.',
+      'permission-denied': 'Sem permissão para acessar estes dados.',
+      'unavailable': 'Sem conexão com a nuvem. Confira a internet.'
+    };
+    return m[c] || ('Não foi possível concluir (' + esc(c || (e && e.message) || 'erro') + ').');
+  }
+
+  function ocupado(botao, sim, texto) {
+    if (!botao) return;
+    if (sim) { botao.dataset.texto = botao.innerHTML; botao.disabled = true; botao.textContent = texto || 'Aguarde…'; }
+    else { botao.disabled = false; if (botao.dataset.texto) botao.innerHTML = botao.dataset.texto; }
+  }
+
+  function telaIniciando() {
+    tela.innerHTML = '<div class="vazio"><span class="icone" aria-hidden="true">🚗</span><p class="carregando">' +
+      (modo === 'carregando-dados' ? 'Carregando os dados da família…' : 'Carregando…') + '</p></div>';
+  }
+
+  function telaSemConfig() {
+    tela.innerHTML = '<h1>🚗 Controle do Carro</h1>' +
+      '<div class="caixa caixa-aviso"><strong>Falta configurar o Firebase</strong>' +
+      '<p style="margin-top:6px">Este endereço ainda não tem o arquivo <code>firebase-config.js</code> com a configuração do projeto. ' +
+      'Quem cuida do aplicativo deve seguir o passo a passo do README.</p></div>' +
+      '<div class="cartao"><h2>Só quer conhecer?</h2><p>Veja o aplicativo com dados de exemplo (nada é salvo).</p>' +
+      '<button class="botao botao-secundario" type="button" data-acao="demo">Ver demonstração</button></div>';
+  }
+
+  function telaErroCarga() {
+    tela.innerHTML = '<h1>🚗 Controle do Carro</h1>' +
+      '<div class="caixa caixa-erro"><strong>Não foi possível carregar</strong><p style="margin-top:6px">' +
+      (navigator.onLine === false ? 'Parece que o celular está sem internet. ' : '') +
+      'Confira a conexão e tente de novo.</p>' + (erroCarga ? '<p class="legenda-simples">' + mensagemErro(erroCarga) + '</p>' : '') + '</div>' +
+      '<button class="botao botao-principal botao-grande" type="button" id="tentar">Tentar de novo</button>' +
+      '<button class="botao botao-secundario" type="button" data-acao="demo">Ver demonstração</button>';
+    $('#tentar').addEventListener('click', function () { location.reload(); });
+  }
+
+  function telaLogin() {
+    tela.innerHTML = '<h1>🚗 Controle do Carro</h1>' +
+      '<p>Entre para ver os abastecimentos e as manutenções dos carros da família.</p><div id="erros"></div>' +
+      '<div class="cartao"><button class="botao botao-principal botao-grande" type="button" id="entrar-google">' +
+      '<span class="icone" aria-hidden="true">🔑</span> Entrar com Google</button>' +
+      '<p class="legenda-simples" style="margin:0">Use a conta Google (Gmail) que está no celular.</p></div>' +
+      '<div class="cartao"><h2>Ou entre com e-mail e senha</h2><form id="form-login" novalidate>' +
+      '<div class="campo"><label for="email">E-mail</label><input type="email" id="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false"></div>' +
+      '<div class="campo"><label for="senha">Senha</label><input type="password" id="senha" autocomplete="current-password">' +
+      '<label class="dica" style="display:flex;gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="mostrar-senha" style="width:24px;height:24px"> Mostrar a senha</label></div>' +
+      '<button class="botao botao-principal" type="submit" id="botao-entrar">Entrar</button>' +
+      '<button class="link-botao" type="button" id="esqueci">Esqueci minha senha</button></form></div>' +
+      '<div class="cartao"><h2>Só quer conhecer?</h2><p>Veja como funciona com dados de exemplo, sem entrar.</p>' +
+      '<button class="botao botao-secundario" type="button" data-acao="demo">Ver demonstração</button></div>' +
+      '<p class="legenda-simples">🔒 Só as pessoas autorizadas pela família conseguem ver os dados.</p>';
+
+    function erro(msg) { $('#erros').innerHTML = caixa('erro', msg); $('#erros').scrollIntoView({ block: 'center' }); }
+    $('#mostrar-senha').addEventListener('change', function () { $('#senha').type = this.checked ? 'text' : 'password'; });
+    $('#entrar-google').addEventListener('click', function () {
+      var b = this; ocupado(b, true, 'Abrindo o Google…');
+      Nuvem.entrarGoogle().catch(function (e) { ocupado(b, false); erro(mensagemErro(e)); });
+    });
+    $('#form-login').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var email = $('#email').value.trim(), senha = $('#senha').value;
+      if (!email || !senha) { erro('Digite o e-mail e a senha.'); return; }
+      var b = $('#botao-entrar'); ocupado(b, true, 'Entrando…');
+      Nuvem.entrarEmail(email, senha).catch(function (e) { ocupado(b, false); erro(mensagemErro(e)); });
+    });
+    $('#esqueci').addEventListener('click', function () {
+      var email = $('#email').value.trim();
+      if (!email) { erro('Digite seu e-mail no campo acima e toque de novo em “Esqueci minha senha”.'); return; }
+      Nuvem.esqueciSenha(email).then(function () {
+        aviso('Verifique seu e-mail', 'Se este e-mail estiver cadastrado, você vai receber um link para criar uma nova senha. Veja também a pasta de spam.');
+      }).catch(function (e) { erro(mensagemErro(e)); });
+    });
+  }
+
+  function telaVerificar() {
+    tela.innerHTML = '<h1>📧 Confirme seu e-mail</h1>' +
+      '<p>Para proteger os dados, precisamos confirmar que o e-mail <strong>' + esc(emailDoUsuario()) + '</strong> é seu. É preciso fazer só uma vez.</p>' +
+      '<div class="cartao"><ol style="padding-left:22px;margin:0">' +
+      '<li>Toque em <strong>Enviar link de confirmação</strong>.</li>' +
+      '<li>Abra seu e-mail (veja também a pasta de spam) e toque no link.</li>' +
+      '<li>Volte aqui e toque em <strong>Já confirmei</strong>.</li></ol></div><div id="erros"></div>' +
+      '<button class="botao botao-principal" type="button" id="enviar-link">Enviar link de confirmação</button>' +
+      '<button class="botao botao-secundario" type="button" id="ja-confirmei">Já confirmei</button>' +
+      '<button class="botao botao-secundario" type="button" data-acao="sair-conta">Sair</button>';
+    $('#enviar-link').addEventListener('click', function () {
+      var b = this; ocupado(b, true, 'Enviando…');
+      Nuvem.enviarVerificacao().then(function () {
+        ocupado(b, false);
+        $('#erros').innerHTML = caixa('ok', 'Link enviado para ' + emailDoUsuario() + '. Abra seu e-mail.');
+      }).catch(function (e) { ocupado(b, false); $('#erros').innerHTML = caixa('erro', mensagemErro(e)); });
+    });
+    $('#ja-confirmei').addEventListener('click', function () {
+      var b = this; ocupado(b, true, 'Conferindo…');
+      Nuvem.recarregarUsuario().then(function (u) {
+        usuarioAtual = u;
+        if (u.emailVerified) decidirPorUsuario();
+        else { ocupado(b, false); $('#erros').innerHTML = caixa('aviso', 'O e-mail ainda não foi confirmado. Abra o link que enviamos e tente de novo.'); }
+      }).catch(function (e) { ocupado(b, false); $('#erros').innerHTML = caixa('erro', mensagemErro(e)); });
+    });
+  }
+
+  function telaSemFamilia() {
+    tela.innerHTML = '<h1>Quase lá</h1>' +
+      '<div class="caixa caixa-info">Você entrou como <strong>' + esc(emailDoUsuario()) + '</strong>, mas este e-mail ainda não tem acesso aos carros da família.</div>' +
+      '<div class="cartao"><h2>Alguém da família já usa o aplicativo?</h2>' +
+      '<p>Peça para essa pessoa abrir <strong>Ajustes → Pessoas com acesso</strong> e incluir o seu e-mail. Depois toque abaixo.</p>' +
+      '<button class="botao botao-principal" type="button" id="tentar">Tentar de novo</button></div>' +
+      '<div class="cartao"><h2>Você é quem está configurando?</h2>' +
+      '<p>Crie a família. Depois você poderá incluir os e-mails das outras pessoas.</p>' +
+      '<div class="campo"><label for="nome-familia">Nome da família</label><input type="text" id="nome-familia" maxlength="60" value="Família"></div>' +
+      '<div id="erros"></div><button class="botao botao-secundario" type="button" id="criar">Criar família</button></div>' +
+      '<button class="botao botao-secundario" type="button" data-acao="sair-conta">Sair e entrar com outra conta</button>';
+    $('#tentar').addEventListener('click', function () { entrarNaFamilia(); });
+    $('#criar').addEventListener('click', function () {
+      var nome = $('#nome-familia').value.trim() || 'Família';
+      confirmar({
+        icone: '👪', titulo: 'Criar uma família nova?',
+        texto: 'Faça isso só se ninguém da família ainda usa o aplicativo. Se alguém já usa, peça para incluir o seu e-mail — senão vocês ficarão com dados separados.',
+        sim: 'Sim, criar', nao: 'Cancelar',
+        aoConfirmar: function () {
+          Nuvem.criarFamilia(nome, emailDoUsuario(), usuarioAtual.uid).then(function (f) {
+            familia = f; comecarAOuvir();
+          }).catch(function (e) { $('#erros').innerHTML = caixa('erro', mensagemErro(e)); });
+        }
+      });
+    });
+  }
+
+  function telaSemAcesso() {
+    tela.innerHTML = '<h1>Sem acesso</h1>' +
+      '<div class="caixa caixa-aviso">O e-mail <strong>' + esc(emailDoUsuario()) + '</strong> não tem mais acesso aos dados desta família, ou o acesso ainda não foi liberado.</div>' +
+      '<p>Peça para quem configurou o aplicativo conferir em <strong>Ajustes → Pessoas com acesso</strong>.</p>' +
+      '<button class="botao botao-principal" type="button" id="tentar">Tentar de novo</button>' +
+      '<button class="botao botao-secundario" type="button" data-acao="sair-conta">Sair</button>';
+    $('#tentar').addEventListener('click', function () { entrarNaFamilia(); });
+  }
+
+  function telaFamilia() {
+    if (estado.demo || !familia) { ir('inicio', true); return; }
+    var meu = emailDoUsuario();
+    var h = '<h1>👪 Pessoas com acesso</h1>' +
+      '<p>Estas pessoas entram no aplicativo e veem <strong>os mesmos carros e registros</strong>, em qualquer celular:</p><div id="erros"></div>';
+    familia.emails.forEach(function (e) {
+      var etiqueta = e === familia.criadoPorEmail ? ' <span class="etiqueta">responsável</span>' : '';
+      if (e === meu) etiqueta += ' <span class="etiqueta">você</span>';
+      var podeRemover = e !== familia.criadoPorEmail && e !== meu;
+      h += '<div class="cartao registro"><div class="linha-topo"><span style="word-break:break-all"><strong>' + esc(e) + '</strong>' + etiqueta + '</span></div>' +
+        (podeRemover ? '<div class="acoes"><button class="botao botao-perigo botao-pequeno" type="button" data-remover="' + esc(e) + '">Remover acesso</button></div>' : '') + '</div>';
+    });
+    h += '<div class="cartao"><h2>Incluir uma pessoa</h2><form id="form-email" novalidate>' +
+      '<div class="campo"><label for="novo-email">E-mail da pessoa</label><input type="email" id="novo-email" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="nome@gmail.com"></div>' +
+      '<button class="botao botao-principal" type="submit">Incluir</button></form>' +
+      '<p class="legenda-simples">A pessoa entra com <strong>“Entrar com Google”</strong> usando esse e-mail, ou com <strong>e-mail e senha</strong> (a conta é criada no Console do Firebase — veja o README).</p></div>';
+    h += '<button class="botao botao-secundario" type="button" data-acao="voltar">Voltar</button>';
+    tela.innerHTML = h;
+
+    function gravarEmails(lista, msg) {
+      var antes = familia.emails;
+      familia = Object.assign({}, familia, { emails: lista });
+      Nuvem.atualizarEmails(lista).then(function () {
+        aviso('Pronto ✔', msg, function () { desenhar(); });
+      }).catch(function (e) { familia = Object.assign({}, familia, { emails: antes }); mostrarErroNuvem(e); });
+      if (navigator.onLine === false) aviso('Sem internet', 'A alteração será enviada quando a internet voltar.', function () { desenhar(); });
+    }
+    $('#form-email').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var e = $('#novo-email').value.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { $('#erros').innerHTML = caixa('erro', 'Este e-mail não parece correto. Exemplo: maria@gmail.com'); return; }
+      if (familia.emails.indexOf(e) >= 0) { $('#erros').innerHTML = caixa('aviso', 'Este e-mail já tem acesso.'); return; }
+      if (familia.emails.length >= 20) { $('#erros').innerHTML = caixa('erro', 'Limite de 20 pessoas atingido.'); return; }
+      gravarEmails(familia.emails.concat([e]), '<strong>' + esc(e) + '</strong> agora tem acesso. Peça para a pessoa abrir o aplicativo e entrar com esse e-mail.');
+    });
+    $$('[data-remover]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var e = b.getAttribute('data-remover');
+        confirmar({
+          icone: '🚫', titulo: 'Remover o acesso?', perigo: true,
+          texto: '<strong>' + esc(e) + '</strong> não vai mais conseguir ver nem alterar os dados dos carros.',
+          sim: 'Sim, remover', nao: 'Cancelar',
+          aoConfirmar: function () {
+            gravarEmails(familia.emails.filter(function (x) { return x !== e; }), 'O acesso de <strong>' + esc(e) + '</strong> foi removido.');
+          }
+        });
+      });
+    });
+  }
+
+  function sairDaConta() {
+    confirmar({
+      icone: '🚪', titulo: 'Sair da conta?',
+      texto: 'Os dados continuam guardados na nuvem. Para voltar, é só entrar de novo.',
+      sim: 'Sim, sair', nao: 'Cancelar',
+      aoConfirmar: function () { estado = estadoVazio(); sessao.escolheuCarro = false; Nuvem.sair(); }
+    });
+  }
+
+  // =====================================================================
+  // Sincronização em tempo real
+  // =====================================================================
+  var indicador = document.getElementById('conexao');
+  function atualizarIndicador() {
+    if (modo !== 'nuvem') { indicador.hidden = true; return; }
+    var offline = navigator.onLine === false;
+    var temPendentes = Object.keys(pendentes).some(function (k) { return pendentes[k]; });
+    if (offline) {
+      indicador.hidden = false; indicador.className = 'conexao conexao-off';
+      indicador.textContent = '📴 Sem internet. ' + (temPendentes
+        ? 'Os registros novos estão guardados neste celular e serão enviados quando a internet voltar.'
+        : 'Você pode continuar anotando normalmente.');
+    } else if (temPendentes) {
+      indicador.hidden = false; indicador.className = 'conexao';
+      indicador.textContent = '⏳ Enviando para a nuvem…';
+    } else {
+      indicador.hidden = true;
+    }
+  }
+  window.addEventListener('online', atualizarIndicador);
+  window.addEventListener('offline', atualizarIndicador);
+
+  async function entrarNaFamilia() {
+    modo = 'iniciando'; desenhar();
+    try {
+      familia = await Nuvem.buscarFamilia(emailDoUsuario());
+    } catch (e) {
+      erroCarga = e;
+      modo = e && e.code === 'permission-denied' ? 'sem-acesso' : 'erro-carga';
+      desenhar(); return;
+    }
+    if (!familia) { modo = 'sem-familia'; desenhar(); return; }
+    comecarAOuvir();
+  }
+
+  function comecarAOuvir() {
+    estado = estadoVazio(); carregado = {}; assinaturas = {}; pendentes = {};
+    modo = 'carregando-dados'; desenhar();
+    Nuvem.ouvir(familia.id, aoReceber, function (e) {
+      if (modo === 'demo') return;
+      Nuvem.pararDeOuvir();
+      erroCarga = e;
+      modo = e && e.code === 'permission-denied' ? 'sem-acesso' : 'erro-carga';
+      desenhar();
+    });
+  }
+
+  function aoReceber(ev) {
+    if (modo !== 'nuvem' && modo !== 'carregando-dados') return;
+    pendentes[ev.colecao] = ev.pendentes;
+    var assinatura, mudou;
+    if (ev.colecao === 'familia') {
+      if (!ev.doc) { Nuvem.pararDeOuvir(); familia = null; modo = 'sem-familia'; desenhar(); return; }
+      if (!Array.isArray(ev.doc.emails) || ev.doc.emails.indexOf(emailDoUsuario()) < 0) {
+        Nuvem.pararDeOuvir(); estado = estadoVazio(); modo = 'sem-acesso'; desenhar(); return;
+      }
+      assinatura = JSON.stringify(ev.doc);
+      familia = ev.doc;
+    } else {
+      var docs = ev.docs.slice().sort(function (a, b) {
+        return ((a.criadoEm || 0) - (b.criadoEm || 0)) || String(a.nome || a.id).localeCompare(String(b.nome || b.id), 'pt-BR');
+      });
+      assinatura = JSON.stringify(docs);
+      estado[COLECOES[ev.colecao]] = docs;
+    }
+    mudou = assinatura !== assinaturas[ev.colecao];
+    assinaturas[ev.colecao] = assinatura;
+    carregado[ev.colecao] = true;
+
+    if (modo === 'carregando-dados') {
+      if (carregado.familia && carregado.veiculos && carregado.abastecimentos && carregado.manutencoes) {
+        modo = 'nuvem';
+        if (!carroPorId(estado.carroAtual) && estado.carros.length) estado.carroAtual = estado.carros[0].id;
+        desenhar();
+        atualizarIndicador();
+      }
+      return;
+    }
+    atualizarIndicador();
+    if (mudou) redesenharSePossivel();
+  }
+
+  // Atualiza a tela com dados vindos de outro celular, sem atrapalhar quem está preenchendo um formulário.
+  function redesenharSePossivel() {
+    var r = rotaAtual().nome;
+    var preenchendo = ['abastecer', 'manutencao', 'carro', 'familia'].indexOf(r) >= 0 ||
+      (r === 'inicio' && !estado.carros.length && $('#form-inicio') && $('#nome1') && document.activeElement && document.activeElement.tagName === 'INPUT');
+    if (!janela.hidden || preenchendo) { redesenhoPendente = true; return; }
+    var y = window.scrollY;
+    desenhar(true);
+    window.scrollTo(0, y);
   }
 
   // =====================================================================
   // Início
   // =====================================================================
+  async function iniciar() {
+    desenhar();
+    var cfg = window.FIREBASE_CONFIG;
+    if (!window.Nuvem || !Nuvem.configValida(cfg)) { modo = 'sem-config'; desenhar(); return; }
+    try {
+      await Nuvem.iniciar(cfg);
+      nuvemPronta = true;
+    } catch (e) {
+      erroCarga = e; modo = 'erro-carga'; desenhar(); return;
+    }
+    Nuvem.aoMudarUsuario(function (u) {
+      usuarioAtual = u;
+      if (modo === 'demo') return;
+      decidirPorUsuario();
+    });
+  }
+
+  function decidirPorUsuario() {
+    var u = usuarioAtual;
+    if (!u) { Nuvem.pararDeOuvir(); familia = null; estado = estadoVazio(); modo = 'login'; desenhar(); return; }
+    if (!u.emailVerified) { modo = 'verificar'; desenhar(); return; }
+    entrarNaFamilia();
+  }
+
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
   }
-  desenhar();
+  iniciar();
 })();

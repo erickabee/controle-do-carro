@@ -173,9 +173,11 @@
 
     if (novo.litros === null || novo.litros === undefined) erros.push('Informe quantos litros foram colocados.');
     else if (!(novo.litros > 0)) erros.push('A quantidade de litros precisa ser maior que zero.');
+    else if (novo.litros >= 1000) erros.push('A quantidade de litros está alta demais. Confira o número.');
 
     if (novo.valor === null || novo.valor === undefined) erros.push('Informe o valor total pago.');
     else if (!(novo.valor > 0)) erros.push('O valor pago precisa ser maior que zero.');
+    else if (novo.valor >= 100000) erros.push('O valor pago está alto demais. Confira o número.');
 
     // Vizinhos por data
     var data = novo.data || hoje;

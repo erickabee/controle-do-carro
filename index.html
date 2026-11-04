@@ -14,6 +14,7 @@
 <body>
   <div id="faixa-demo" class="faixa-demo" hidden></div>
   <header id="topo" class="topo" hidden></header>
+  <div id="conexao" class="conexao" role="status" aria-live="polite" hidden></div>
   <main id="tela" class="tela" tabindex="-1">
     <p class="carregando">Carregando…</p>
   </main>
@@ -25,8 +26,11 @@
   </nav>
   <div id="janela" class="janela-fundo" hidden></div>
   <noscript><p style="padding:20px;font-size:20px">Este aplicativo precisa de JavaScript ativado no navegador.</p></noscript>
+  <!-- Configuração do Firebase: arquivo pessoal, fora do Git (veja firebase-config.example.js) -->
+  <script src="firebase-config.js" onerror="window.FIREBASE_CONFIG = null"></script>
   <script src="js/calculos.js"></script>
   <script src="js/demo.js"></script>
+  <script src="js/nuvem.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

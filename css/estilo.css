@@ -69,6 +69,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
   padding: 6px 10px; font-weight: 600; cursor: pointer;
 }
 
+.conexao {
+  background: #1e3a8a; color: #fff; text-align: center; padding: 8px 16px; font-weight: 600; font-size: .95rem;
+  position: sticky; top: 0; z-index: 9;
+}
+.conexao-off { background: #78350f; }
+.botao:disabled { opacity: .6; cursor: wait; }
+.tela code { background: #f3f4f6; padding: 1px 5px; border-radius: 5px; }
+
 /* ---------- Menu de baixo ---------- */
 .menu {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
@@ -121,7 +129,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .campo > label, .campo > .rotulo { display: block; font-weight: 700; margin-bottom: 6px; }
 .campo .opcional { font-weight: 400; color: var(--suave); font-size: .9rem; }
 .dica { display: block; font-size: .9rem; color: var(--suave); margin-top: 6px; }
-input[type=text], input[type=date], input[type=number], textarea, select {
+input[type=text], input[type=date], input[type=number], input[type=email], input[type=password], textarea, select {
   width: 100%; min-height: 56px; padding: 12px 14px; font-size: 1.2rem;
   border: 2px solid #9ca3af; border-radius: 12px; background: #fff;
 }

@@ -1,153 +1,264 @@
 # 🚗 Controle do Carro
 
-Aplicativo simples, em português, para anotar **abastecimentos** e **manutenções** de até **dois carros** e acompanhar quilometragem, consumo, gastos e lembretes (troca de óleo, pneus etc.).
+Aplicativo web, em português, para uma família acompanhar **abastecimentos**, **consumo**, **gastos** e **manutenções** de até **dois carros**, com os mesmos dados em vários celulares.
 
-Feito para ser usado no celular, com botões grandes, letras legíveis e poucos campos.
+Feito para pessoas pouco acostumadas com tecnologia: botões grandes, letras legíveis, formulários curtos, números no formato brasileiro (R$, vírgula decimal) e mensagens simples.
+
+| Entrar | Painel | Relatórios |
+|---|---|---|
+| ![Tela de entrada](docs/imagens/login.png) | ![Painel do carro](docs/imagens/painel.png) | ![Relatórios](docs/imagens/relatorios.png) |
+
+<sub>Imagens geradas no modo demonstração, com dados inventados.</sub>
+
+**Funcionalidades**
+
+- Registro de abastecimento com cálculo na hora: preço por litro, km rodados, consumo (km/L), custo por km e variação do preço do litro.
+- Validações simples. A quilometragem não pode ser menor que a anterior, e litros e valor precisam ser maiores que zero. Valores estranhos pedem confirmação antes de salvar.
+- Manutenções com lembretes:
+  - troca de óleo a cada 5.000 km (configurável) e, se quiser, também por meses;
+  - pneus e outros serviços com lembrete por km ou por data, definido pela pessoa.
+- Painel com quilometragem atual, consumo recente, gasto do mês, último abastecimento e a próxima manutenção. Os avisos aparecem em amarelo (chegando) e vermelho (atrasada).
+- Histórico com filtros por período, edição e exclusão (sempre com confirmação).
+- Relatórios: gasto com combustível por mês e consumo mês a mês.
+- Dois carros com dados e cálculos separados. Cada carro tem uma cor própria na tela para não registrar no carro errado.
+- **Nuvem da família (Firebase):** login com Google ou com e-mail e senha. Só entram os e-mails autorizados, e o que um celular registra aparece no outro em segundos.
+- **Funciona sem internet:** os registros ficam guardados no celular e são enviados quando a conexão voltar.
+- Cópia de segurança (.json), restauração e planilha (.csv para Excel e Google Planilhas).
+- Modo demonstração com dados de exemplo, sem login. Nada desse modo vai para a nuvem.
+
+> 📱 **Instruções para quem vai usar no celular:** [COMO-USAR.md](COMO-USAR.md)
 
 ---
 
-## Tecnologia e onde os dados ficam
+## Tecnologia
 
-- É uma **página web comum** (HTML, CSS e JavaScript puro). Não precisa instalar nada, não tem servidor, não tem cadastro nem senha e não usa bibliotecas externas.
-- Os dados ficam salvos **somente no navegador do aparelho** onde o app é usado (`localStorage`). Nada vai para a internet.
-- **Consequências importantes:**
-  - Se o pai usa no celular dele e a mãe no dela, **cada celular terá seus próprios dados** — eles não se sincronizam. O ideal é escolher **um celular** para fazer as anotações.
-  - Se o celular for trocado, formatado, ou se os “dados de navegação/sites” forem apagados, os registros se perdem.
-  - Por isso existe a **cópia de segurança** (veja abaixo).
+| Parte | Escolha |
+|---|---|
+| Interface | HTML, CSS e JavaScript puro, sem framework e sem etapa de compilação |
+| Login | Firebase Authentication: Google e e-mail/senha |
+| Banco de dados | Cloud Firestore com cache persistente no aparelho (funciona sem internet) |
+| SDK | Firebase JS SDK 10.14.1, carregado do CDN oficial do Google (`gstatic.com`) |
+| Hospedagem | GitHub Pages, publicado pelo GitHub Actions |
+| Testes | Node (cálculos) e Firebase Emulator Suite com `@firebase/rules-unit-testing` (regras de segurança) |
 
-## Como iniciar
+### Estrutura dos dados no Firestore
 
-### Opção 1 — Publicar no GitHub Pages (recomendado para usar no celular)
+```
+familias/{familiaId}                       nome, emails autorizados, quem criou
+familias/{familiaId}/veiculos/{id}         nome, marca, modelo, ano, cor, intervalo da troca de óleo
+familias/{familiaId}/abastecimentos/{id}   carroId, data, km, litros, valor, tanqueCheio, combustível, obs
+familias/{familiaId}/manutencoes/{id}      carroId, tipo, data, km, valor, lembretes, obs
+```
 
-1. No GitHub, abra o repositório → **Settings** → **Pages**.
-2. Em *Source*, escolha **Deploy from a branch**, selecione o branch com estes arquivos e a pasta **/ (root)**. Salve.
-3. Depois de 1–2 minutos aparecerá o endereço (algo como `https://SEU-USUARIO.github.io/NOME-DO-REPOSITORIO/`).
-4. Abra esse endereço **no celular dos seus pais**, no Chrome (Android) ou Safari (iPhone).
-5. Adicione à tela inicial para abrir como um aplicativo:
-   - **Android/Chrome:** menu ⋮ → **Adicionar à tela inicial** (ou “Instalar app”).
-   - **iPhone/Safari:** botão Compartilhar → **Adicionar à Tela de Início**.
+Todo registro guarda o `carroId`. Cálculos, histórico, relatórios e lembretes são sempre filtrados por carro, então os dois carros nunca se misturam.
 
-Assim o app ganha um ícone, abre em tela cheia e **funciona mesmo sem internet**. Os dados continuam somente no celular — o GitHub só entrega os arquivos do app, nunca recebe os registros.
+### Arquivos
 
-### Opção 2 — Testar no computador
+```
+index.html                 página do aplicativo
+css/estilo.css             aparência
+js/calculos.js             fórmulas, validações e formatação brasileira (sem dependências)
+js/nuvem.js                Firebase: login, leitura em tempo real e gravação
+js/app.js                  telas, fluxo de login/família, importação, cópia de segurança e planilha
+js/demo.js                 dados de demonstração (inventados)
+firestore.rules            regras de segurança do Firestore
+firebase-config.example.js modelo da configuração do Firebase (a real fica fora do Git)
+scripts/gerar-config.mjs   gera firebase-config.js a partir de um segredo (usado na publicação)
+.github/workflows/         testes e publicação no GitHub Pages
+testes/                    testes dos cálculos e das regras
+sw.js, manifest.webmanifest  uso sem internet e “Adicionar à tela inicial”
+```
 
-Basta abrir o arquivo `index.html` no navegador (dois cliques). Tudo funciona, só não fica disponível sem internet como app instalado.
+---
 
-Se preferir um servidor local:
+## Segurança e privacidade
+
+- **Negado por padrão.** As regras em [`firestore.rules`](firestore.rules) recusam qualquer acesso que não esteja liberado explicitamente. Para ler ou gravar é preciso:
+  1. estar logado;
+  2. ter o **e-mail verificado** (contas Google já vêm verificadas; contas de e-mail e senha confirmam pelo link enviado no primeiro acesso);
+  3. ter o e-mail na lista `emails` do documento da família.
+- **Cada família só acessa os próprios registros.** A busca “qual é a minha família” só devolve famílias que contêm o seu e-mail, e listar todas as famílias é negado.
+- **Validação dos dados.** As regras conferem tipos, campos permitidos, tamanhos e valores (por exemplo, litros e valor maiores que zero). Quem criou a família não pode ser removido nem substituído, e só essa pessoa pode apagar a família.
+- **O repositório tem só código e documentação.** Não guarda dados dos carros, cópias de segurança, senhas nem credenciais administrativas. O `.gitignore` bloqueia `firebase-config.js`, `.env`, chaves de conta de serviço e os arquivos exportados pelo app.
+- **A configuração web do Firebase não é segredo.** `apiKey`, `projectId` e `appId` só identificam o projeto e acabam visíveis no navegador de qualquer site que use Firebase. Quem protege os dados são o login e as regras. Mesmo assim, ela fica fora do Git (em um segredo do GitHub) e a chave é restrita ao domínio do site (passo 9 abaixo).
+- **Nenhuma credencial administrativa é usada.** Não há Admin SDK nem conta de serviço. O script de publicação recusa um conteúdo que pareça chave de conta de serviço.
+- As regras têm **41 testes automáticos** (`testes/regras.test.mjs`), que rodam no emulador a cada envio para o GitHub.
+
+---
+
+## Passo a passo: criar e configurar o Firebase
+
+Leva uns 20 minutos. Tudo é gratuito no plano **Spark**, que é mais do que suficiente para uma família.
+
+### 1. Criar o projeto
+1. Acesse <https://console.firebase.google.com> e clique em **Criar um projeto**.
+2. Dê um nome (ex.: `controle-do-carro`). O Google Analytics não é necessário e pode ser desativado.
+
+### 2. Registrar o aplicativo Web
+1. Na página inicial do projeto, clique no ícone **Web** (`</>`).
+2. Apelido: `Controle do Carro`. **Não** marque “Firebase Hosting”.
+3. Ele mostra um trecho `const firebaseConfig = { apiKey: ..., ... }`. **Guarde esse trecho**: ele será usado nos passos 10 e 11. Se perder, ele fica em ⚙️ **Configurações do projeto → Geral → Seus apps**.
+
+### 3. Ativar o login
+**Criação → Authentication → Vamos começar → Método de login**:
+- **Google:** ativar e escolher o e-mail de suporte.
+- **E-mail/senha:** ativar só a primeira opção (sem “Link do e-mail”).
+
+### 4. Autorizar o endereço do site
+**Authentication → Configurações → Domínios autorizados → Adicionar domínio**: `erickabee.github.io` (troque pelo seu usuário do GitHub). `localhost` já vem na lista.
+
+### 5. (Recomendado) Impedir cadastros por conta própria
+**Authentication → Configurações → Ações do usuário**: desmarque **Ativar criação (inscrição)**. Assim só você cria contas de e-mail e senha. Mesmo sem isso, ninguém de fora acessa os dados, porque as regras exigem um e-mail autorizado e verificado.
+
+### 6. E-mails em português
+**Authentication → Modelos → idioma** (ícone de lápis/globo): escolha **Português (Brasil)**. Isso traduz os e-mails de confirmação e de redefinição de senha.
+
+### 7. Criar o banco de dados
+**Criação → Firestore Database → Criar banco de dados**:
+- Local: **`southamerica-east1` (São Paulo)**. Esse local não pode ser mudado depois.
+- Comece no **modo de produção**, que nega tudo.
+
+### 8. Publicar as regras de segurança
+**Firestore Database → Regras**: apague o conteúdo, cole o arquivo [`firestore.rules`](firestore.rules) inteiro e clique em **Publicar**.
+
+Se preferir a linha de comando:
+
+```bash
+npx firebase-tools login
+```
+
+```bash
+npx firebase-tools deploy --only firestore:rules --project SEU-PROJETO
+```
+
+### 9. Restringir a chave da API ao seu site
+No [Google Cloud Console](https://console.cloud.google.com/apis/credentials) (mesmo projeto), abra **APIs e serviços → Credenciais → Browser key (auto created by Firebase)**:
+- **Restrições de aplicativos → Referenciadores HTTP** e adicione:
+  - `https://erickabee.github.io/*`
+  - `https://SEU-PROJETO.firebaseapp.com/*` (necessário para o login com Google)
+  - `http://localhost:8000/*` (só se for testar no computador)
+- Salve. A mudança pode levar alguns minutos para valer.
+
+### 10. Configurar o app no seu computador (opcional, para testar)
+
+```bash
+cp firebase-config.example.js firebase-config.js
+```
+
+Abra `firebase-config.js` e cole os valores do passo 2. Esse arquivo **não vai para o Git**. Depois rode um servidor local:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-e abra `http://localhost:8000`.
+e abra <http://localhost:8000>.
 
-## Como usar (resumo para os pais)
+### 11. Publicar o site no GitHub Pages
+1. No GitHub, abra o repositório → **Settings → Secrets and variables → Actions → New repository secret**:
+   - **Name:** `FIREBASE_CONFIG`
+   - **Secret:** cole o objeto do passo 2 (pode ser o trecho `const firebaseConfig = {...};` inteiro ou só o `{...}`).
+2. **Settings → Pages → Build and deployment → Source:** escolha **GitHub Actions**.
+3. Envie algo para o branch `main` ou rode o workflow manualmente (**Actions → Testar e publicar → Run workflow**). Ele:
+   - roda os testes dos cálculos e das regras;
+   - cria o `firebase-config.js` a partir do segredo, só dentro da publicação;
+   - publica em `https://erickabee.github.io/controle-do-carro/`.
 
-1. **Primeira vez:** escreva o nome dos carros (ex.: “Carro do Pai”, “Carro da Mãe”) e toque em **Começar**. Se tiver só um carro, apague o nome do segundo.
-2. **Escolha o carro** ao abrir o app. O topo da tela fica sempre com a **cor e o nome do carro escolhido** — confira antes de salvar.
-3. **Registre a última troca de óleo** (botão *Registrar manutenção*) para que os avisos comecem a funcionar.
-4. **Toda vez que abastecer:** *Registrar abastecimento* → quilometragem do painel, litros e valor pago (estão na nota) → *Salvar*. O app mostra na hora o preço por litro, quanto o carro andou, o consumo e o custo por km.
-5. **Início** mostra: quilometragem atual, consumo recente, gasto do mês, último abastecimento e a próxima manutenção, com avisos em amarelo (chegando) ou vermelho (atrasada).
-6. **Histórico:** lista do mais recente para o mais antigo, com filtros de período, e botões para **Corrigir** ou **Apagar** (sempre pede confirmação).
-7. **Relatórios:** gasto com combustível por mês e consumo médio mês a mês, com frases explicando (“melhor mês”, “pior mês”).
-8. **Ajustes:** dados dos carros, intervalo da troca de óleo, cópia de segurança, planilha e ajuda.
+---
 
-## Cópia de segurança e exportação
+## Cadastrar as pessoas da família
 
-Em **Ajustes → Cópia de segurança**:
+1. **Você (responsável):** abra o site, toque em **Entrar com Google**, depois em **Criar família**, e cadastre os carros.
+2. Em **Ajustes → Pessoas com acesso**, inclua o e-mail de cada pessoa.
+3. Para cada pessoa:
+   - **Tem conta Google (Gmail):** ela só precisa tocar em **Entrar com Google**.
+   - **Vai usar e-mail e senha:** no Console do Firebase, em **Authentication → Usuários → Adicionar usuário**, informe o e-mail e uma senha e passe a senha para ela. No primeiro acesso o app pede para confirmar o e-mail, tocando no link que chega na caixa de entrada.
+4. Para tirar o acesso de alguém: **Ajustes → Pessoas com acesso → Remover acesso**. A pessoa perde o acesso na hora.
 
-- **Salvar cópia de segurança:** gera um arquivo `.json` com todos os dados. No celular, abre a tela de compartilhar — dá para mandar para si mesmo no **WhatsApp**, **e-mail** ou salvar no **Google Drive**.
-- **Restaurar uma cópia:** escolhe esse arquivo e traz os dados de volta (substitui os dados atuais do aparelho, com confirmação). Serve também para **passar os dados de um celular para outro**.
-- **Exportar planilha (Excel):** gera um `.csv` (separado por ponto e vírgula, com vírgula decimal) que abre no Excel ou no Google Planilhas. Serve para consulta; para guardar os dados use a cópia de segurança.
+> Dica: no **iPhone**, o login com Google às vezes não abre quando o app está na tela inicial. Nesse caso use **e-mail e senha**, ou entre pelo Safari e depois adicione à tela inicial.
 
-O próprio app lembra de fazer a cópia depois de 10 registros novos ou 30 dias sem cópia.
+---
 
-## Dados de demonstração
+## Migração dos dados da versão antiga
 
-Na tela inicial há o botão **Ver demonstração**, que carrega dois carros inventados — “Carro 1 (exemplo)” e “Carro 2 (exemplo)” — com 8 meses de abastecimentos e algumas manutenções (um com troca de óleo chegando, outro com troca atrasada). Enquanto a demonstração estiver ativa, uma **faixa amarela “DEMONSTRAÇÃO”** aparece em todas as telas, com o botão **Apagar e começar**. O app comum começa **sem nenhum dado**.
+A versão anterior guardava tudo só no navegador do aparelho. Nada se perde na migração:
+
+- **Automática:** se o celular já usou a versão antiga no mesmo endereço, o app novo mostra no painel o aviso **“Registros antigos neste celular → Enviar para a nuvem”**.
+- **Por arquivo:** em **Ajustes → Usar uma cópia de segurança**, escolha o arquivo `.json` salvo pela versão antiga. São aceitas cópias da versão antiga e da nova.
+- **Juntar ou substituir:**
+  - **Juntar (recomendado):** traz o que está na cópia sem apagar nada. Um carro com o mesmo nome é unido ao existente. Para os outros, o app pergunta se deve criar um carro novo ou juntar com um existente.
+  - **Substituir tudo:** deixa a nuvem igual à cópia, com confirmação dupla.
+- **Sem duplicar:** cada registro mantém o mesmo identificador, então importar duas vezes não cria cópias.
+- **Nada é apagado no aparelho:** os dados locais antigos continuam lá. Os dados de demonstração nunca são enviados.
+
+---
+
+## Desenvolvimento e testes
+
+```bash
+npm install
+```
+
+Testes dos cálculos (Node puro):
+
+```bash
+npm test
+```
+
+Testes das regras de segurança (precisa de Java 11 ou mais novo; usa o emulador, não o projeto real):
+
+```bash
+npm run test:regras
+```
+
+Para rodar o app inteiro contra os emuladores (login e banco falsos, locais), crie um `firebase-config.js` com o projeto de demonstração e a opção de emulador:
+
+```js
+window.FIREBASE_CONFIG = { apiKey: 'x', authDomain: 'demo-controle-do-carro.firebaseapp.com', projectId: 'demo-controle-do-carro', appId: '1:1:web:1', emulador: true };
+```
+
+Depois inicie os emuladores:
+
+```bash
+npx firebase emulators:start --only firestore,auth --project demo-controle-do-carro
+```
+
+e, em outro terminal, o servidor:
+
+```bash
+python3 -m http.server 8000
+```
+
+> Ao alterar arquivos do app, aumente `VERSAO` em `sw.js` para os celulares baixarem a versão nova.
 
 ---
 
 ## Como os cálculos são feitos
 
-Todas as fórmulas estão em `js/calculos.js` e são verificadas pelos testes em `testes/calculos.test.js`.
+Todas as fórmulas estão em `js/calculos.js` e são verificadas por `testes/calculos.test.js`.
 
 | Cálculo | Fórmula |
 |---|---|
 | Preço por litro | `valor pago ÷ litros` |
 | Km rodados desde o anterior | `km deste abastecimento − km do abastecimento anterior` |
-| Variação do preço | `preço/litro atual − preço/litro anterior` (em R$ e em %: `diferença ÷ preço anterior × 100`) |
+| Variação do preço | `preço/litro atual − preço/litro anterior` (em R$ e em %) |
 | Consumo (km/L) | `km entre dois tanques cheios ÷ litros colocados depois do tanque cheio anterior (incluindo o atual)` |
-| Custo por km | `soma dos valores pagos nesse trecho ÷ km do trecho` |
-| Consumo recente (Início) | `soma dos km dos 3 últimos trechos ÷ soma dos litros desses trechos` |
-| Consumo do mês (Relatórios) | `soma dos km dos trechos que terminam no mês ÷ soma dos litros desses trechos` |
-| Quilometragem atual | maior quilometragem já anotada (abastecimentos ou manutenções) |
-| Próxima troca de óleo | `km da última troca + intervalo` (padrão 5.000 km, configurável) e, opcionalmente, `data da última troca + N meses` — vale o que vier primeiro |
-| Outros lembretes (pneus etc.) | só existem se a pessoa definir: `km da manutenção + “avisar daqui a X km”` e/ou uma data |
+| Custo por km | `soma dos valores pagos no trecho ÷ km do trecho` |
+| Consumo recente (painel) | `soma dos km dos 3 últimos trechos ÷ soma dos litros desses trechos` |
+| Consumo do mês (relatórios) | `km dos trechos que terminam no mês ÷ litros desses trechos` |
+| Quilometragem atual | maior quilometragem anotada (abastecimentos ou manutenções) |
+| Próxima troca de óleo | `km da última troca + intervalo` (padrão 5.000 km) e, se configurado, `data + N meses`; vale o que vier primeiro |
+| Outros lembretes | `km da manutenção + “avisar daqui a X km”` e/ou uma data, só se a pessoa definir |
 
-### Consumo e o “tanque cheio”
+**Tanque cheio:** o formulário pergunta “Encheu o tanque até o fim?”. Quando o tanque **não** é completado, os litros daquele abastecimento são somados ao próximo tanque cheio e o consumo é calculado para o trecho inteiro. Se alguém marcar “Sim” sem ter completado, o consumo daquele trecho sai impreciso. Quando não há dados suficientes, o app explica o motivo em vez de mostrar um número.
 
-O consumo usa o **método do tanque cheio**: a distância entre as quilometragens de dois abastecimentos com tanque completo, dividida pelos litros colocados no abastecimento que completa o percurso.
-
-Exemplo: encheu o tanque com 40.000 km; no próximo abastecimento, com 40.420 km, colocou 35 litros para encher de novo → `420 ÷ 35 = 12 km/L`.
-
-Como nem sempre se completa o tanque, o formulário pergunta **“Encheu o tanque até o fim?”** (padrão: *Sim*):
-
-- Se **não** completou, aquele abastecimento não tem consumo próprio. Os litros dele são **somados** ao próximo abastecimento com tanque cheio, e o consumo é calculado para o trecho inteiro.
-- O primeiro tanque cheio registrado não tem consumo (falta o ponto de partida).
-- **Limitação:** se for marcado “Sim” sem o tanque ter sido realmente completado, o consumo daquele trecho (e do seguinte) sai impreciso. Quando não houver dados suficientes, o app **explica por quê** em vez de mostrar um número.
-
-### Distância percorrida
-
-Se a pessoa não souber a quilometragem total, pode informar só os **km andados desde o último abastecimento** (ex.: marcador parcial do painel). O app calcula `quilometragem = km do abastecimento anterior + distância`. Se as duas forem informadas e não baterem (diferença maior que 2 km), avisa e usa a do painel.
-
-### Validações
-
-Bloqueiam o salvamento (com mensagem simples):
-
-- quilometragem menor que a do abastecimento anterior, ou maior que a de um abastecimento posterior (quando se registra algo antigo);
-- litros ou valor iguais a zero ou vazios;
-- data no futuro; número que não dá para entender.
-
-Pedem confirmação (“Algo parece diferente… Voltar e corrigir / Está certo, salvar assim”):
-
-- preço por litro abaixo de R$ 2,50 ou acima de R$ 12,00;
-- mais de 100 litros;
-- consumo calculado abaixo de 3 ou acima de 30 km/L;
-- mais de 1.500 km desde o abastecimento anterior, ou quilometragem igual à anterior;
-- distância informada que não bate com a quilometragem.
-
-### Avisos de manutenção
-
-- 🟡 **Chegando:** faltam até 500 km ou até 30 dias.
-- 🔴 **Atrasada:** passou da quilometragem ou da data. Ex.: “A troca de óleo está atrasada em 200 km”.
-- 🟢 **Em dia:** nos demais casos. Ex.: “Faltam 3.200 km para a troca de óleo”.
-
-Pneus **não** têm intervalo fixo: ao registrar a troca, a pessoa escolhe (se quiser) “avisar daqui a X km” e/ou “avisar em tal data”.
-
-### Dois carros
-
-Cada abastecimento e manutenção é gravado com o identificador do carro. Todos os cálculos, históricos, relatórios e lembretes filtram por esse carro — nada é misturado.
+**Avisos:** 🟡 chegando = faltam até 500 km ou 30 dias; 🔴 atrasada = passou do km ou da data.
 
 ---
 
-## Estrutura dos arquivos
+## Custos e limites
 
-```
-index.html            página principal
-css/estilo.css        aparência (letras grandes, botões grandes)
-js/calculos.js        fórmulas, validações e formatação brasileira
-js/app.js             telas, armazenamento, cópia de segurança e planilha
-js/demo.js            gerador dos dados de demonstração
-sw.js                 permite usar sem internet (quando publicado)
-manifest.webmanifest  permite “Adicionar à tela inicial”
-testes/               testes dos cálculos
-```
+O plano gratuito (Spark) permite 50 mil leituras e 20 mil gravações por dia no Firestore. Uma família registra algumas dezenas de itens por mês e, ao abrir o app, lê no máximo alguns milhares de documentos, bem abaixo do limite.
 
-## Testes
+## Licença
 
-```bash
-node testes/calculos.test.js
-```
-
-> Ao alterar arquivos depois de publicado, aumente o número em `VERSAO` no `sw.js` para os celulares baixarem a versão nova.
+[MIT](LICENSE)

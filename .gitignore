@@ -1,0 +1,21 @@
+# Configuração pessoal do Firebase (copie de firebase-config.example.js)
+firebase-config.js
+
+# Nunca versionar credenciais administrativas
+*service-account*.json
+*serviceAccount*.json
+*-firebase-adminsdk-*.json
+.env
+.env.*
+
+# Cópias de segurança e planilhas exportadas pelo app (contêm dados reais)
+copia-controle-carro-*.json
+planilha-controle-carro-*.csv
+
+# Ferramentas
+node_modules
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebaserc
