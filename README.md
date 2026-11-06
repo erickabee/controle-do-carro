@@ -60,7 +60,6 @@ Cada pessoa entra com a conta Google ou com e-mail e senha. Só entram os e-mail
 
 ---
 
-<!-- CRÉDITO SUGERIDO — A CONFIRMAR antes de ir para o branch principal -->
 Projeto de [Erick Abe](https://github.com/erickabee), idealizado para a família e desenvolvido com o auxílio do Claude (IA da Anthropic).
 
 Distribuído sob a licença [MIT](LICENSE).
