@@ -2,7 +2,7 @@
 
 Guia completo para colocar o app no ar: criar o projeto Firebase, cadastrar as pessoas da família, configurar o app e publicar no GitHub Pages.
 
-> Voltar para o [README](../README.md) · Guia para quem usa no celular: [COMO-USAR.md](../COMO-USAR.md)
+> Voltar para o [README](../README.md) · Guia para quem usa no celular: [COMO-USAR.md](../COMO-USAR.md) · Desenvolvimento e testes: [DESENVOLVIMENTO.md](DESENVOLVIMENTO.md)
 
 Leva uns 20 minutos. Tudo é gratuito no plano **Spark**, que é mais do que suficiente para uma família.
 
@@ -112,27 +112,9 @@ A versão anterior guardava tudo só no navegador do aparelho. Para trazer esses
 
 ---
 
-## Rodar o app contra os emuladores do Firebase
+## Desenvolvimento com emuladores
 
-Para desenvolvimento, dá para usar login e banco falsos, locais, sem tocar em nenhum projeto real. Crie um `firebase-config.js` com o projeto de demonstração e a opção de emulador:
-
-```js
-window.FIREBASE_CONFIG = { apiKey: 'x', authDomain: 'demo-controle-do-carro.firebaseapp.com', projectId: 'demo-controle-do-carro', appId: '1:1:web:1', emulador: true };
-```
-
-Inicie os emuladores (precisa de Java 11 ou mais novo):
-
-```bash
-npx firebase emulators:start --only firestore,auth --project demo-controle-do-carro
-```
-
-Em outro terminal, inicie o servidor:
-
-```bash
-python3 -m http.server 8000
-```
-
-> Ao alterar arquivos do app, aumente `VERSAO` em `sw.js` para os celulares baixarem a versão nova.
+Para testar sem tocar em nenhum projeto real (login e banco locais), veja [DESENVOLVIMENTO.md](DESENVOLVIMENTO.md#rodar-o-app-contra-os-emuladores-do-firebase).
 
 ---
 
