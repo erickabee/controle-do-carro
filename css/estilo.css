@@ -341,6 +341,20 @@ table.tabela { width: 100%; border-collapse: collapse; font-size: .95rem; }
   .topo-dentro { max-width: 680px; }
   h1 { font-size: 2.1rem; }
   .info-valor { font-size: 1.9rem; }
+
+  /* Navegação vira uma coluna fixa à esquerda, fora da área de conteúdo:
+     nada rola por baixo dela. O conteúdo e o topo ganham um recuo do mesmo tamanho. */
+  body { padding-bottom: 32px; padding-left: 112px; }
+  body.sem-menu { padding-left: 0; }
+  .menu {
+    top: 0; bottom: 0; right: auto; width: 112px;
+    flex-direction: column; justify-content: flex-start; gap: 6px;
+    padding: calc(20px + env(safe-area-inset-top)) 10px 20px;
+    border-top: 0; border-right: 1px solid var(--linha);
+    background: var(--branco);
+  }
+  .menu a { flex: none; max-width: none; min-height: 80px; border-radius: 16px; font-size: .88rem; }
+  .menu a:hover { background: var(--fundo); }
 }
 
 /* ---------- Telas bem estreitas ---------- */
