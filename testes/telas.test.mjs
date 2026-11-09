@@ -114,6 +114,29 @@ async function escolher(p, nome) {
     await p.waitForTimeout(200);
   }
 }
+// Salva o formulário; se o app pedir confirmação de algo "diferente", confirma.
+async function salvarFormulario(p, seletor) {
+  await p.click(seletor);
+  await p.waitForSelector('.janela');
+  if (await p.isVisible('[data-janela=salvar]')) { await p.click('[data-janela=salvar]'); await p.waitForSelector('.janela'); }
+  const texto = (await p.textContent('.janela')).replace(/\s+/g, ' ');
+  await okJanela(p);
+  return texto;
+}
+async function abastecer(p, km, litros, valor) {
+  await ir(p, '#abastecer');
+  await p.fill('#km', km); await p.fill('#litros', litros); await p.fill('#valor', valor);
+  return salvarFormulario(p, '#form-abast button[type=submit]');
+}
+async function abrirCorrecao(p, aba) {
+  await ir(p, '#historico');
+  await p.click(`[data-aba=${aba}]`); await p.click('[data-periodo=tudo]');
+  await p.click('.registro a:has-text("Corrigir") >> nth=0');
+  await p.waitForSelector(aba === 'abastecimentos' ? '#form-abast' : '#form-manut');
+}
+const doCarro = async (col, carroId) => (await listar(`familias/${fid}/${col}`)).filter(r => r.carroId === carroId);
+const textoLembretes = async (p) => { await ir(p, '#inicio'); return (await p.textContent('.tela')).replace(/\s+/g, ' '); };
+
 async function arquivoDeCopia(dados) {
   const caminho = join(RAIZ, 'testes', '.copia-teste-' + Math.random().toString(36).slice(2) + '.json');
   await (await import('node:fs/promises')).writeFile(caminho, JSON.stringify({ aplicativo: 'controle-do-carro', versao: 2, criadoEm: new Date().toISOString(), dados }));
@@ -239,6 +262,132 @@ await teste('reativar devolve o carro à lista com os registros', async () => {
   await ir(p, '#historico'); await p.click('[data-aba=abastecimentos]'); await p.click('[data-periodo=tudo]');
   assert.match(await p.textContent('.resumo-periodo'), /1 abastecimento/);
   assert.ok(await p.isVisible('.registro >> text=Corrigir'), 'volta a poder corrigir');
+});
+
+// ---------- Correção de registros e edição do carro ----------
+let idTeste, idsAbast = [], idOleo;
+
+await teste('corrigir um abastecimento mantém o ID e refaz distância, consumo, custo, preço e relatórios', async () => {
+  await cadastrarCarro(p, 'Carro Teste');
+  idTeste = (await listar(`familias/${fid}/veiculos`)).find(c => c.nome === 'Carro Teste').id;
+  await abastecer(p, '20000', '40', '240');
+  const t2 = await abastecer(p, '20500', '50', '300');
+  assert.match(t2, /10,0 km por litro/);
+  await esperarNuvem(async () => (await doCarro('abastecimentos', idTeste)).length === 2, '2 abastecimentos');
+  idsAbast = (await doCarro('abastecimentos', idTeste)).map(a => a.id).sort();
+
+  await abrirCorrecao(p, 'abastecimentos');
+  assert.equal(await p.inputValue('#km'), '20.500', 'o formulário vem preenchido com o registro');
+  await p.fill('#km', '20600'); await p.fill('#litros', '40'); await p.fill('#valor', '260');
+  const t = await salvarFormulario(p, '#form-abast button[type=submit]');
+  assert.match(t, /Abastecimento corrigido/);
+  assert.match(t, /Andou 600 km/);
+  assert.match(t, /15,0 km por litro/);          // 600 km / 40 L
+  assert.match(t, /R\$ 0,43 por km/);            // 260 / 600
+  assert.match(t, /R\$ 6,50/);                   // 260 / 40
+  assert.match(t, /subiu R\$ 0,50/);             // 6,50 - 6,00
+
+  await esperarNuvem(async () => (await doCarro('abastecimentos', idTeste)).some(a => a.km === 20600), 'correção gravada');
+  const depois = await doCarro('abastecimentos', idTeste);
+  assert.deepEqual(depois.map(a => a.id).sort(), idsAbast, 'mesmos IDs, nenhum registro novo');
+  const corrigido = depois.find(a => a.km === 20600);
+  assert.equal(corrigido.litros, 40); assert.equal(corrigido.valor, 260);
+
+  await ir(p, '#historico'); await p.click('[data-aba=abastecimentos]'); await p.click('[data-periodo=tudo]');
+  assert.match(await p.textContent('.resumo-periodo'), /R\$ 500,00/);
+  assert.match(await p.textContent('.resumo-periodo'), /15,0 km\/L/);
+  await ir(p, '#relatorios');
+  assert.match(await p.textContent('.tela'), /Total no período: R\$ 500,00/);
+});
+
+await teste('corrigir uma manutenção mantém o ID e refaz o lembrete e a próxima troca', async () => {
+  await ir(p, '#manutencao');
+  await p.click('.opcoes.tipos .opcao:has-text("Troca de óleo")');
+  await p.fill('#km', '20600');
+  await salvarFormulario(p, '#form-manut button[type=submit]');
+  assert.match(await textoLembretes(p), /Faltam 5\.000 km para a troca de óleo/);
+  await esperarNuvem(async () => (await doCarro('manutencoes', idTeste)).length === 1, 'troca de óleo');
+  idOleo = (await doCarro('manutencoes', idTeste))[0].id;
+
+  await abrirCorrecao(p, 'manutencoes');
+  await p.fill('#km', '20000');
+  const t = await salvarFormulario(p, '#form-manut button[type=submit]');
+  assert.match(t, /Manutenção corrigida/);
+  assert.match(t, /Faltam 4\.400 km para a troca de óleo/);   // 20.000 + 5.000 - 20.600
+  assert.match(await textoLembretes(p), /Faltam 4\.400 km para a troca de óleo/);
+  await esperarNuvem(async () => (await doCarro('manutencoes', idTeste)).some(m => m.km === 20000), 'correção da manutenção');
+  assert.deepEqual((await doCarro('manutencoes', idTeste)).map(m => m.id), [idOleo], 'mesmo ID');
+
+  // Pneus: lembrete definido pela pessoa e corrigido depois
+  await ir(p, '#manutencao');
+  await p.click('.opcoes.tipos .opcao:has-text("Troca de pneus")');
+  await p.fill('#km', '20600');
+  await p.click('#bloco-lembrete summary'); await p.fill('#lembreteKm', '40000');
+  await salvarFormulario(p, '#form-manut button[type=submit]');
+  assert.match(await textoLembretes(p), /Faltam 40\.000 km para a troca de pneus/);
+  await abrirCorrecao(p, 'manutencoes');                      // o mais recente é o de pneus
+  assert.equal(await p.inputValue('#lembreteKm'), '40.000');
+  await p.fill('#lembreteKm', '30000');
+  await salvarFormulario(p, '#form-manut button[type=submit]');
+  assert.match(await textoLembretes(p), /Faltam 30\.000 km para a troca de pneus/);
+});
+
+await teste('editar nome, marca, modelo, ano, cor e óleo do carro mantém o ID e os registros', async () => {
+  const totalAntes = (await listar(`familias/${fid}/veiculos`)).length;
+  await ir(p, '#ajustes');
+  await p.click('a:has-text("Dados do Carro Teste")');
+  await p.waitForSelector('#form-carro');
+  assert.equal(await p.inputValue('#nome'), 'Carro Teste');
+  await p.fill('#nome', 'Carro Renomeado'); await p.fill('#marca', 'Marca Z'); await p.fill('#modelo', 'Modelo Q'); await p.fill('#ano', '2020');
+  await p.click('.opcao:has-text("Verde")');
+  await p.fill('#oleoKm', '10000'); await p.fill('#oleoMeses', '6');
+  await salvarFormulario(p, '#form-carro button[type=submit]');
+  await esperarNuvem(async () => (await listar(`familias/${fid}/veiculos`)).some(c => c.id === idTeste && c.nome === 'Carro Renomeado'), 'carro editado');
+  const carros = await listar(`familias/${fid}/veiculos`);
+  const c = carros.find(x => x.id === idTeste);
+  assert.equal(carros.length, totalAntes, 'nenhum carro novo foi criado');
+  assert.deepEqual([c.nome, c.marca, c.modelo, c.ano, c.cor, c.oleoKm, c.oleoMeses], ['Carro Renomeado', 'Marca Z', 'Modelo Q', '2020', '#15803d', 10000, 6]);
+  assert.equal((await doCarro('abastecimentos', idTeste)).length, 2, 'abastecimentos continuam ligados ao carro');
+  assert.equal((await doCarro('manutencoes', idTeste)).length, 2, 'manutenções continuam ligadas ao carro');
+  const tela = await textoLembretes(p);
+  assert.match(await p.textContent('.topo-nome'), /Carro Renomeado/);
+  assert.match(tela, /Faltam 9\.400 km para a troca de óleo/);   // 20.000 + 10.000 - 20.600
+});
+
+await teste('carro arquivado é só consulta: não edita o carro, abastecimentos nem manutenções', async () => {
+  await ir(p, '#carro/' + idTeste);
+  await p.click('#arquivar-carro'); await p.click('[data-janela=sim]'); await okJanela(p);
+  await esperarNuvem(async () => (await listar(`familias/${fid}/veiculos`)).find(c => c.id === idTeste).arquivado === true, 'arquivado');
+  const antes = JSON.stringify([await doCarro('abastecimentos', idTeste), await doCarro('manutencoes', idTeste)]);
+
+  await ir(p, '#carro/' + idTeste);
+  await p.waitForSelector('.arquivo-cabecalho');
+  assert.equal(await p.$('#form-carro'), null, 'o cadastro do carro arquivado não abre para edição');
+  await ir(p, '#manutencao/' + idOleo);
+  assert.match(await p.textContent('.janela h2'), /Carro arquivado/); await okJanela(p);
+  await ir(p, '#abastecer/' + idsAbast[0]);
+  assert.match(await p.textContent('.janela h2'), /Carro arquivado/); await okJanela(p);
+  await p.waitForSelector('.arquivo-cabecalho');
+  await p.click('[data-aba=manutencoes]'); await p.click('[data-periodo=tudo]');
+  assert.equal(await p.locator('.tela >> text="Corrigir"').count(), 0);
+  assert.equal(await p.locator('.registro').count(), 2, 'as manutenções aparecem para consulta');
+  assert.equal(JSON.stringify([await doCarro('abastecimentos', idTeste), await doCarro('manutencoes', idTeste)]), antes, 'nada foi alterado');
+});
+
+await teste('se o carro for arquivado em outro celular durante a edição, salvar não o desarquiva', async () => {
+  const outro = (await listar(`familias/${fid}/veiculos`)).find(c => c.nome === 'Carro 4');
+  await ir(p, '#carro/' + outro.id);
+  await p.waitForSelector('#form-carro');
+  const { id, atualizado, ...dados } = outro;
+  await gravarDoc(`familias/${fid}/veiculos/${outro.id}`, { ...dados, arquivado: true, arquivadoEm: Date.now() });  // "outro celular"
+  await p.waitForTimeout(800);
+  await p.fill('#nome', 'Carro 4 editado');
+  await p.click('#form-carro button[type=submit]');
+  assert.match(await p.textContent('#erros'), /arquivado/);
+  await p.waitForTimeout(500);
+  const c = (await listar(`familias/${fid}/veiculos`)).find(x => x.id === outro.id);
+  assert.equal(c.arquivado, true, 'continua arquivado');
+  assert.equal(c.nome, 'Carro 4', 'o nome não foi alterado');
 });
 
 await teste('restaurar uma cópia com 10 carros traz todos (sem corte)', async () => {

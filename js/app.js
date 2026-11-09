@@ -1281,6 +1281,12 @@
 
     $('#form-carro').addEventListener('submit', function (ev) {
       ev.preventDefault();
+      // Relê o carro na hora de salvar: ele pode ter sido arquivado em outro celular
+      // enquanto este formulário estava aberto (e salvar não pode desarquivá-lo).
+      var atual = novo ? c : carroPorId(c.id);
+      if (!novo && (!atual || atual.arquivado)) {
+        return mostrarErros(['Este carro foi arquivado (ou removido) enquanto você editava. Para mudar os dados dele, reative-o em Ajustes.']);
+      }
       var erros = [];
       var nome = $('#nome').value.trim();
       if (!nome) erros.push('Escreva o nome do carro.');
@@ -1295,7 +1301,7 @@
       if (erros.length) return mostrarErros(erros);
       var dados = { nome: nome, marca: $('#marca').value.trim(), modelo: $('#modelo').value.trim(), ano: ano,
         cor: ($('input[name=cor]:checked') || {}).value || c.cor, oleoKm: oleoKm || 0, oleoMeses: oleoMeses || null };
-      var atualizado = Object.assign({}, c, dados);
+      var atualizado = Object.assign({}, atual, dados);
       Dados.gravar('veiculos', atualizado);
       if (novo) { estado.carroAtual = atualizado.id; sessao.escolheuCarro = true; }
       salvar();
