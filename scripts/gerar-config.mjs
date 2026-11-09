@@ -2,7 +2,7 @@
 // Usado pelo GitHub Actions (segredo do repositório) e opcionalmente no seu computador:
 //   FIREBASE_CONFIG='{"apiKey":"...","projectId":"..."}' node scripts/gerar-config.mjs
 // Aceita JSON ou o trecho "const firebaseConfig = { ... };" copiado do Console do Firebase.
-import { writeFileSync } from 'node:fs';
+import { appendFileSync, writeFileSync } from 'node:fs';
 
 const bruto = (process.env.FIREBASE_CONFIG || '').trim();
 if (!bruto) {
@@ -34,3 +34,5 @@ for (const k of permitidos) if (config[k]) limpo[k] = String(config[k]);
 
 writeFileSync('firebase-config.js', '// Gerado automaticamente. Não editar.\nwindow.FIREBASE_CONFIG = ' + JSON.stringify(limpo, null, 2) + ';\n');
 console.log('firebase-config.js criado para o projeto "' + limpo.projectId + '".');
+// No GitHub Actions, informa o projeto para a etapa de publicação no Firebase Hosting.
+if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'projectId=' + limpo.projectId + '\n');

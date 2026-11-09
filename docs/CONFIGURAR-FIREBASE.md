@@ -1,6 +1,6 @@
 # Configurar o Firebase e publicar o Controle do Carro
 
-Guia completo para colocar o app no ar: criar o projeto Firebase, cadastrar as pessoas da família, configurar o app e publicar no GitHub Pages.
+Guia completo para colocar o app no ar: criar o projeto Firebase, cadastrar as pessoas da família, configurar o app e publicar no Firebase Hosting (`controlecarro.web.app`).
 
 > Voltar para o [README](../README.md) · Guia para quem usa no celular: [COMO-USAR.md](../COMO-USAR.md) · Desenvolvimento e testes: [DESENVOLVIMENTO.md](DESENVOLVIMENTO.md)
 
@@ -23,7 +23,7 @@ Leva uns 20 minutos. Tudo é gratuito no plano **Spark**, que é mais do que suf
 - **E-mail/senha:** ativar só a primeira opção (sem “Link do e-mail”).
 
 ## 4. Autorizar o endereço do site
-**Authentication → Configurações → Domínios autorizados → Adicionar domínio**: `erickabee.github.io` (troque pelo seu usuário do GitHub). `localhost` já vem na lista.
+**Authentication → Configurações → Domínios autorizados → Adicionar domínio**: `controlecarro.web.app` (o endereço do site, passo 11). `localhost` já vem na lista.
 
 ## 5. (Recomendado) Impedir cadastros por conta própria
 **Authentication → Configurações → Ações do usuário**: desmarque **Ativar criação (inscrição)**. Assim só você cria contas de e-mail e senha. Mesmo sem isso, ninguém de fora acessa os dados, porque as regras exigem um e-mail autorizado e verificado.
@@ -52,7 +52,7 @@ npx firebase-tools deploy --only firestore:rules --project SEU-PROJETO
 ## 9. Restringir a chave da API ao seu site
 No [Google Cloud Console](https://console.cloud.google.com/apis/credentials) (mesmo projeto), abra **APIs e serviços → Credenciais → Browser key (auto created by Firebase)**:
 - **Restrições de aplicativos → Referenciadores HTTP** e adicione:
-  - `https://erickabee.github.io/*`
+  - `https://controlecarro.web.app/*`
   - `https://SEU-PROJETO.firebaseapp.com/*` (necessário para o login com Google)
   - `http://localhost:8000/*` (só se for testar no computador)
 - Salve. A mudança pode levar alguns minutos para valer.
@@ -71,17 +71,41 @@ python3 -m http.server 8000
 
 e abra <http://localhost:8000>.
 
-## 11. Publicar o site no GitHub Pages
-1. No GitHub, abra o repositório → **Settings → Secrets and variables → Actions → New repository secret**:
-   - **Name:** `FIREBASE_CONFIG`
-   - **Secret:** cole o objeto do passo 2 (pode ser o trecho `const firebaseConfig = {...};` inteiro ou só o `{...}`).
-2. **Settings → Pages → Build and deployment → Source:** escolha **GitHub Actions**.
-3. Envie algo para o branch `main` ou rode o workflow manualmente (**Actions → Testar e publicar → Run workflow**). Ele:
-   - roda os testes dos cálculos e das regras;
-   - cria o `firebase-config.js` a partir do segredo, só dentro da publicação ([`scripts/gerar-config.mjs`](../scripts/gerar-config.mjs), que recusa conteúdo parecido com chave de conta de serviço);
-   - publica em `https://erickabee.github.io/controle-do-carro/`.
+## 11. Publicar no Firebase Hosting (controlecarro.web.app)
 
-Sem o segredo `FIREBASE_CONFIG`, a etapa de publicação falha de propósito, com uma mensagem explicando o que falta.
+O site fica no **Firebase Hosting**, no endereço `https://controlecarro.web.app`, e é publicado automaticamente pelo GitHub Actions. Tudo isso é gratuito no plano Spark.
+
+### 11.1 Criar o site
+1. No Console do Firebase: **Criação → Hosting → Vamos começar**. O assistente mostra comandos de linha de comando; **não precisa rodá-los**, é só avançar até **Continuar no console**.
+2. No painel do Hosting, role até o fim e clique em **Adicionar outro site**. Digite `controlecarro` e confirme.
+   - Se o nome não estiver disponível, escolha outro e troque `controlecarro` em `firebase.json` (campo `"site"`) e em `.github/workflows/publicar.yml` (`url` e `ENDERECO_APP`).
+
+### 11.2 Criar a credencial de publicação (permissão só de publicar o site)
+1. No [Google Cloud Console](https://console.cloud.google.com/iam-admin/serviceaccounts), com o projeto do Firebase selecionado: **IAM e administrador → Contas de serviço → Criar conta de serviço**.
+2. Nome: `publicacao-github`. Clique em **Criar e continuar**.
+3. Em **Papéis**, adicione:
+   - **Administrador do Firebase Hosting** (Firebase Hosting Admin);
+   - **Leitor de chaves de API** (API Keys Viewer).
+
+   Clique em **Concluir**. Esses papéis permitem publicar o site, mas **não** dão acesso ao banco de dados nem às contas de login.
+4. Abra a conta criada → aba **Chaves** → **Adicionar chave → Criar nova chave → JSON**. Um arquivo `.json` é baixado.
+   - **Não coloque esse arquivo na pasta do projeto** e não o envie a ninguém.
+
+### 11.3 Guardar as configurações no GitHub
+No repositório: **Settings → Secrets and variables → Actions → New repository secret**:
+- `FIREBASE_CONFIG`: o objeto do passo 2 (pode ser o trecho `const firebaseConfig = {...};` inteiro ou só o `{...}`).
+- `FIREBASE_SERVICE_ACCOUNT`: o **conteúdo inteiro** do arquivo `.json` do passo 11.2.
+
+Depois de salvar, **apague o arquivo `.json` do computador**. Ele fica guardado só no GitHub, criptografado, e nunca aparece nos registros da publicação.
+
+### 11.4 Publicar
+Envie algo para o branch `main` ou rode o workflow manualmente (**Actions → Testar e publicar → Run workflow**). Ele:
+1. roda os testes dos cálculos, das regras e das telas;
+2. cria o `firebase-config.js` a partir do segredo, só dentro da publicação ([`scripts/gerar-config.mjs`](../scripts/gerar-config.mjs), que recusa conteúdo parecido com chave de conta de serviço);
+3. publica o app em `https://controlecarro.web.app`, com cabeçalhos que fazem os celulares receberem a versão nova logo na próxima abertura;
+4. transforma o endereço antigo (`https://erickabee.github.io/controle-do-carro/`) numa página que leva ao endereço novo e limpa a versão antiga guardada nos celulares. Para isso, **Settings → Pages → Source** continua em **GitHub Actions**.
+
+Sem os segredos `FIREBASE_CONFIG` ou `FIREBASE_SERVICE_ACCOUNT`, a publicação falha de propósito, com uma mensagem dizendo o que falta. Nesse caso, o endereço antigo continua como estava.
 
 ---
 

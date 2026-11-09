@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Controle do Carro mudou de endereço</title>
+  <!-- O endereço novo é preenchido pela publicação (__ENDERECO_APP__). -->
+  <script>location.replace('__ENDERECO_APP__/' + location.hash);</script>
+  <style>
+    body { margin: 0; font: 19px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #f6f7f8; color: #17191c; }
+    main { max-width: 520px; margin: 0 auto; padding: 48px 20px; }
+    h1 { font-size: 1.6rem; margin: 0 0 12px; }
+    a.botao { display: block; margin-top: 20px; padding: 16px; border-radius: 16px; background: #0f766e; color: #fff; text-align: center; font-weight: 700; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>O Controle do Carro mudou de endereço</h1>
+    <p>O novo endereço é <strong>__ENDERECO_CURTO__</strong>. Se a página não abrir sozinha, toque no botão.</p>
+    <p>Dica: depois de abrir, adicione o aplicativo de novo à tela inicial do celular.</p>
+    <a class="botao" href="__ENDERECO_APP__/">Abrir o Controle do Carro</a>
+  </main>
+</body>
+</html>

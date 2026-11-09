@@ -2,7 +2,7 @@
 
 Aplicativo para a minha família anotar os abastecimentos e as manutenções de um ou mais carros. Foi feito pensando nos meus pais, que não têm muita familiaridade com tecnologia: botões grandes, poucos campos, tudo em português do Brasil, e os mesmos dados no celular de cada um.
 
-**▶ [Abrir o app](https://erickabee.github.io/controle-do-carro/)**: publicado em 09/11/2026 no GitHub Pages, com um projeto Firebase próprio no plano gratuito. O acesso exige login com um e-mail autorizado pela família. Para conhecer sem login, use o botão **Ver demonstração** na tela de entrada, que mostra o app com dados fictícios.
+**▶ [Abrir o app](https://controlecarro.web.app)**: publicado no Firebase Hosting, com um projeto Firebase próprio no plano gratuito. O acesso exige login com um e-mail autorizado pela família. Para conhecer sem login, use o botão **Ver demonstração** na tela de entrada, que mostra o app com dados fictícios.
 
 | Entrada | Painel do carro | Relatórios |
 |---|---|---|
@@ -51,7 +51,7 @@ Cada pessoa entra com a conta Google ou com e-mail e senha. Só entram os e-mail
 
 - HTML, CSS e JavaScript, sem framework
 - **Firebase Authentication** (Google e e-mail/senha) e **Cloud Firestore**, com cache no aparelho para funcionar sem internet
-- **GitHub Actions** para testes e publicação no **GitHub Pages**
+- **GitHub Actions** para testes e publicação no **Firebase Hosting**
 - Testes com **Node**, **Firebase Emulator Suite** e **`@firebase/rules-unit-testing`**
 
 ## Documentação

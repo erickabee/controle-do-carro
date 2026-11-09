@@ -22,3 +22,7 @@ ui-debug.log
 
 # Arquivos temporários dos testes de tela
 testes/.copia-teste-*.json
+
+# Site montado pela publicação
+_site/
+_redirecionar/

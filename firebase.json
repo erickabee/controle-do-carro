@@ -2,9 +2,40 @@
   "firestore": {
     "rules": "firestore.rules"
   },
+  "hosting": {
+    "site": "controlecarro",
+    "public": "_site",
+    "ignore": [
+      "**/.*"
+    ],
+    "cleanUrls": false,
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      }
+    ]
+  },
   "emulators": {
-    "firestore": { "host": "127.0.0.1", "port": 8080 },
-    "auth": { "host": "127.0.0.1", "port": 9099 },
-    "ui": { "enabled": false }
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8080
+    },
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 9099
+    },
+    "ui": {
+      "enabled": false
+    },
+    "hosting": {
+      "host": "127.0.0.1",
+      "port": 5000
+    }
   }
 }

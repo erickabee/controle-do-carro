@@ -6,7 +6,7 @@ Guia simples para quem vai anotar os abastecimentos e as manutenções.
 
 ## 1. Abrir pela primeira vez
 
-1. Abra o link que recebeu: **https://erickabee.github.io/controle-do-carro/**
+1. Abra o link que recebeu: **https://controlecarro.web.app**
    - Android: abra no **Chrome**.
    - iPhone: abra no **Safari**.
 2. Escolha como entrar:

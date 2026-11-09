@@ -42,17 +42,24 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pages: write
-      id-token: write
     environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      name: firebase-hosting
+      url: https://controlecarro.web.app
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Conferir a credencial de publicação
+        env:
+          CREDENCIAL: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$CREDENCIAL" ]; then
+            echo "::error::Falta o segredo FIREBASE_SERVICE_ACCOUNT. Veja docs/CONFIGURAR-FIREBASE.md, seção 'Publicar no Firebase Hosting'."
+            exit 1
+          fi
       - name: Criar firebase-config.js a partir do segredo FIREBASE_CONFIG
+        id: config
         env:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
         run: node scripts/gerar-config.mjs
@@ -60,9 +67,38 @@ jobs:
         run: |
           mkdir _site
           cp -r index.html css js manifest.webmanifest sw.js icone.svg icone-192.png icone-512.png firebase-config.js _site/
+      - name: Publicar no Firebase Hosting (controlecarro.web.app)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ steps.config.outputs.projectId }}
+          channelId: live
+
+  # O endereço antigo (GitHub Pages) passa a levar ao endereço novo.
+  redirecionar-endereco-antigo:
+    needs: publicar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      ENDERECO_APP: https://controlecarro.web.app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Montar a página de redirecionamento
+        run: |
+          mkdir _redirecionar
+          cp publicacao/redirecionar/* _redirecionar/
+          curto="${ENDERECO_APP#https://}"
+          sed -i "s#__ENDERECO_APP__#${ENDERECO_APP}#g; s#__ENDERECO_CURTO__#${curto}#g" _redirecionar/index.html _redirecionar/404.html
+          ! grep -q "__ENDERECO" _redirecionar/*.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: _redirecionar
       - id: deploy
         uses: actions/deploy-pages@v4
