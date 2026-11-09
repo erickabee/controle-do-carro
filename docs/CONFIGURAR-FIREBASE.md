@@ -85,7 +85,8 @@ O site fica no **Firebase Hosting**, no endereço `https://controlecarro.web.app
 2. Nome: `publicacao-github`. Clique em **Criar e continuar**.
 3. Em **Papéis**, adicione:
    - **Administrador do Firebase Hosting** (Firebase Hosting Admin);
-   - **Leitor de chaves de API** (API Keys Viewer).
+   - **Leitor de chaves de API** (API Keys Viewer);
+   - **Consumidor do Service Usage** (Service Usage Consumer): sem ele a publicação falha com `AUTH_PERMISSION_DENIED … serviceusage.services.get`.
 
    Clique em **Concluir**. Esses papéis permitem publicar o site, mas **não** dão acesso ao banco de dados nem às contas de login.
 4. Abra a conta criada → aba **Chaves** → **Adicionar chave → Criar nova chave → JSON**. Um arquivo `.json` é baixado.
