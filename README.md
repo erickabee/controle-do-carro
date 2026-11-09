@@ -1,6 +1,6 @@
 # 🚗 Controle do Carro
 
-Aplicativo para a minha família anotar os abastecimentos e as manutenções de dois carros. Foi feito pensando nos meus pais, que não têm muita familiaridade com tecnologia: botões grandes, poucos campos, tudo em português do Brasil, e os mesmos dados no celular de cada um.
+Aplicativo para a minha família anotar os abastecimentos e as manutenções de um ou mais carros. Foi feito pensando nos meus pais, que não têm muita familiaridade com tecnologia: botões grandes, poucos campos, tudo em português do Brasil, e os mesmos dados no celular de cada um.
 
 **▶ [Abrir o app](https://erickabee.github.io/controle-do-carro/)**: publicado em 09/11/2026 no GitHub Pages, com um projeto Firebase próprio no plano gratuito. O acesso exige login com um e-mail autorizado pela família. Para conhecer sem login, use o botão **Ver demonstração** na tela de entrada, que mostra o app com dados fictícios.
 
@@ -13,7 +13,7 @@ Aplicativo para a minha família anotar os abastecimentos e as manutenções de 
 
 ## Por que existe
 
-Com dois carros em casa, é difícil lembrar de cabeça quanto se abasteceu, se o carro está gastando mais do que antes, quanto foi gasto no mês e quando chega a próxima troca de óleo. Meus pais precisavam de um jeito simples de anotar isso cada um no seu celular, sem misturar os dados de um carro com os do outro.
+Com um ou mais carros em casa, é difícil lembrar de cabeça quanto se abasteceu, se o carro está gastando mais do que antes, quanto foi gasto no mês e quando chega a próxima troca de óleo. Meus pais precisavam de um jeito simples de anotar isso cada um no seu celular, sem misturar os dados de um carro com os do outro.
 
 ## O que a família consegue fazer
 
@@ -22,7 +22,8 @@ Com dois carros em casa, é difícil lembrar de cabeça quanto se abasteceu, se 
 - **Ver o painel** com a quilometragem atual, o consumo recente, o gasto do mês, o último abastecimento e a próxima manutenção.
 - **Consultar o histórico** por período, e corrigir ou apagar registros, sempre com confirmação.
 - **Ver relatórios** de gasto com combustível por mês e de consumo ao longo do tempo.
-- **Acompanhar dois carros separados:** cada um tem seus próprios registros, cálculos, lembretes e uma cor própria na tela.
+- **Acompanhar um ou mais carros, separados:** cada um tem seus próprios registros, cálculos, lembretes e uma cor própria na tela. A família começa sem nenhum carro, cadastra o primeiro e adiciona outros quando precisar.
+- **Arquivar um carro** que não é mais usado: ele sai da lista, mas todos os registros continuam guardados e podem ser consultados em modo somente leitura ou reativados.
 - **Guardar uma cópia** dos dados em arquivo e exportar uma planilha para Excel ou Google Planilhas.
 
 ## Em vários celulares

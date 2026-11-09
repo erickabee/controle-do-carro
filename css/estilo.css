@@ -188,7 +188,7 @@ textarea { min-height: 96px; resize: vertical; }
 .opcoes { display: flex; flex-wrap: wrap; gap: 10px; }
 .opcao { position: relative; }
 .opcao input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.opcao span {
+.opcao input + span {
   display: flex; align-items: center; justify-content: center; min-height: 54px; padding: 10px 18px;
   border: 1.5px solid #c3c9cf; border-radius: 14px; background: var(--branco); cursor: pointer; font-weight: 600;
 }
@@ -196,7 +196,7 @@ textarea { min-height: 96px; resize: vertical; }
 .opcao input:checked + span::before { content: "✓ "; white-space: pre; font-weight: 800; }
 .opcoes.duas .opcao { flex: 1; }
 .opcoes.tipos { display: grid; grid-template-columns: 1fr 1fr; }
-.opcoes.tipos .opcao span { height: 100%; min-height: 64px; text-align: center; }
+.opcoes.tipos .opcao input + span { height: 100%; min-height: 64px; text-align: center; }
 
 details.mais { margin-bottom: 22px; background: var(--branco); border: 1px solid var(--linha); border-radius: 14px; padding: 4px 16px; }
 details.mais summary { cursor: pointer; font-weight: 650; color: var(--acento); padding: 12px 0; min-height: 48px; }
@@ -367,3 +367,25 @@ table.tabela { width: 100%; border-collapse: collapse; font-size: .95rem; }
 }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- Vários carros ---------- */
+/* Lista compacta quando há muitos carros: uma linha por carro, fácil de rolar */
+.lista-compacta .escolha-carro { padding: 14px 18px 14px 24px; margin-bottom: 10px; border-radius: 18px; }
+.lista-compacta .escolha-carro .nome { font-size: 1.25rem; }
+.lista-compacta .escolha-carro .sub { font-size: .95rem; margin-top: 2px; }
+.lista-compacta .escolha-carro .alerta { margin-top: 8px; }
+
+/* Carros arquivados (Ajustes e tela sem carros) */
+.carro-arquivado { padding: 14px 0; border-top: 1px solid var(--linha); }
+.carro-arquivado:first-of-type { border-top: 0; }
+.carro-arquivado-nome { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; margin: 0 0 2px; }
+.carro-arquivado .ponto-carro, .arquivo-cabecalho .ponto-carro { background: var(--tom); box-shadow: none; }
+.carro-arquivado .botoes-lado { margin-top: 8px; flex-wrap: wrap; }
+.carro-arquivado .botao-pequeno { margin: 0; }
+
+/* Cabeçalho do histórico somente leitura */
+.arquivo-cabecalho {
+  background: var(--branco); border: 1px solid var(--linha); border-left: 6px solid var(--tom);
+  border-radius: 14px; padding: 16px 18px 6px; margin-bottom: 22px; box-shadow: var(--sombra);
+}
+.arquivo-nome { display: flex; align-items: center; gap: 10px; font-size: 1.3rem; font-weight: 700; margin: 0 0 4px; }

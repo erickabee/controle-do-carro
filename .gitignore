@@ -19,3 +19,6 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 .firebaserc
+
+# Arquivos temporários dos testes de tela
+testes/.copia-teste-*.json

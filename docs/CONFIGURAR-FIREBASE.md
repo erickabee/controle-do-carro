@@ -87,7 +87,7 @@ Sem o segredo `FIREBASE_CONFIG`, a etapa de publicação falha de propósito, co
 
 ## Cadastrar as pessoas da família
 
-1. **Você (responsável):** abra o site, toque em **Entrar com Google**, depois em **Criar família**, e cadastre os carros.
+1. **Você (responsável):** abra o site, toque em **Entrar com Google**, depois em **Criar família**. A família começa sem carros: toque em **Cadastrar primeiro carro**. Os outros carros entram depois, em **Ajustes → Adicionar carro**.
 2. Em **Ajustes → Pessoas com acesso**, inclua o e-mail de cada pessoa.
 3. Para cada pessoa:
    - **Tem conta Google (Gmail):** ela só precisa tocar em **Entrar com Google**.

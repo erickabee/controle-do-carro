@@ -31,6 +31,10 @@ jobs:
         run: npm test
       - name: Testes das regras de segurança (emulador do Firestore)
         run: npm run test:regras
+      - name: Instalar o navegador dos testes de tela
+        run: npx playwright install --with-deps chromium
+      - name: Testes de tela (navegador + emuladores)
+        run: npm run test:telas
 
   publicar:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

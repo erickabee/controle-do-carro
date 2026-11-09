@@ -7,7 +7,6 @@
 
   var C = window.Calc;
   var CHAVE = 'controleCarro.v1';
-  var MAX_CARROS = 2;
   var CORES = [
     { nome: 'Azul', valor: '#1e40af' },
     { nome: 'Vermelho', valor: '#b91c1c' },
@@ -51,7 +50,7 @@
   var CHAVE_PREF = 'controleCarro.preferencias';
   var COLECOES = { veiculos: 'carros', abastecimentos: 'abastecimentos', manutencoes: 'manutencoes' };
   var CAMPOS = {
-    veiculos: ['nome', 'marca', 'modelo', 'ano', 'cor', 'oleoKm', 'oleoMeses', 'criadoEm'],
+    veiculos: ['nome', 'marca', 'modelo', 'ano', 'cor', 'oleoKm', 'oleoMeses', 'criadoEm', 'arquivado', 'arquivadoEm'],
     abastecimentos: ['carroId', 'data', 'km', 'distanciaInformada', 'litros', 'valor', 'tanqueCheio', 'combustivel', 'obs', 'criadoEm'],
     manutencoes: ['carroId', 'tipo', 'descricao', 'data', 'km', 'valor', 'lembreteKm', 'lembreteData', 'obs', 'criadoEm']
   };
@@ -103,6 +102,8 @@
       r.oleoMeses = r.oleoMeses ? Math.round(r.oleoMeses) : null;
       r.ano = r.ano ? String(r.ano) : '';
       if (!/^#[0-9a-fA-F]{6}$/.test(r.cor || '')) r.cor = CORES[0].valor;
+      r.arquivado = r.arquivado === true;
+      r.arquivadoEm = r.arquivado && typeof r.arquivadoEm === 'number' ? r.arquivadoEm : null;
     }
     return r;
   }
@@ -157,10 +158,26 @@
   // Acesso aos dados
   // =====================================================================
   function carroPorId(id) { return estado.carros.filter(function (c) { return c.id === id; })[0] || null; }
+  // Carros arquivados não aparecem na escolha nem recebem registros novos.
+  function carrosAtivos() { return estado.carros.filter(function (c) { return !c.arquivado; }); }
+  function carrosArquivados() { return estado.carros.filter(function (c) { return c.arquivado; }); }
   function carroAtual() {
-    var c = carroPorId(estado.carroAtual);
-    if (!c && estado.carros.length) { c = estado.carros[0]; estado.carroAtual = c.id; }
-    return c;
+    var ativos = carrosAtivos();
+    var c = ativos.filter(function (x) { return x.id === estado.carroAtual; })[0];
+    if (!c && ativos.length) { c = ativos[0]; estado.carroAtual = c.id; }
+    return c || null;
+  }
+  function carroArquivado(id) { var c = carroPorId(id); return !!(c && c.arquivado); }
+  // Carro arquivado é somente leitura: avisa e leva ao histórico dele.
+  function avisarArquivado(carroId) {
+    aviso('Carro arquivado', 'Este registro é de um carro arquivado. Para corrigir ou anotar algo nele, reative o carro em Ajustes.',
+      function () { ir('arquivo/' + encodeURIComponent(carroId), true); });
+  }
+  // Sugere a cor menos usada entre os carros ativos (as cores podem se repetir).
+  function proximaCor() {
+    var uso = {};
+    carrosAtivos().forEach(function (c) { uso[c.cor] = (uso[c.cor] || 0) + 1; });
+    return CORES.slice().sort(function (a, b) { return (uso[a.valor] || 0) - (uso[b.valor] || 0); })[0].valor;
   }
   function abastDoCarro(id) { return estado.abastecimentos.filter(function (a) { return a.carroId === id; }); }
   function manutDoCarro(id) { return estado.manutencoes.filter(function (m) { return m.carroId === id; }); }
@@ -246,7 +263,7 @@
   // =====================================================================
   function montarMoldura(rota) {
     var carro = carroAtual();
-    var semCarro = !carro || rota === 'boas-vindas' || rota === 'escolher' || rota === 'sistema';
+    var semCarro = !carro || rota === 'boas-vindas' || rota === 'escolher' || rota === 'sistema' || rota === 'arquivo';
     var emFormulario = rota === 'abastecer' || rota === 'manutencao' || rota === 'carro';
 
     if (estado.demo) {
@@ -271,7 +288,7 @@
       '<span class="topo-rotulo">Carro selecionado</span>' +
       '<span class="topo-nome"><span class="ponto-carro" aria-hidden="true"></span>' + esc(carro.nome) + '</span>' +
       (desc ? '<span class="topo-rotulo">' + esc(desc) + '</span>' : '') + '</div>' +
-      (estado.carros.length > 1 && !emFormulario ? '<button type="button" data-acao="trocar-carro">Trocar carro</button>' : '') +
+      (carrosAtivos().length > 1 && !emFormulario ? '<button type="button" data-acao="trocar-carro">Trocar carro</button>' : '') +
       '</div>';
 
     menu.hidden = emFormulario;
@@ -310,18 +327,21 @@
     }
     var r = rotaAtual();
     var nome = r.nome;
-    var livre = nome === 'ajuda' || (nome === 'familia' && !estado.demo);
+    var ativos = carrosAtivos().length;
+    // Telas que funcionam mesmo sem carro ativo escolhido
+    var livre = nome === 'ajuda' || nome === 'carro' || nome === 'arquivo' || (nome === 'familia' && !estado.demo);
 
-    if (!estado.carros.length && !livre) nome = 'boas-vindas';
-    else if (estado.carros.length > 1 && !sessao.escolheuCarro && !livre) nome = 'escolher';
-    else if (nome === 'escolher' && estado.carros.length < 2) nome = 'inicio';
-    if (estado.carros.length && estado.carros.length < 2) sessao.escolheuCarro = true;
+    if (!ativos && !livre) nome = 'boas-vindas';
+    else if (ativos > 1 && !sessao.escolheuCarro && !livre) nome = 'escolher';
+    else if (nome === 'escolher' && ativos < 2) nome = 'inicio';
+    if (ativos === 1) sessao.escolheuCarro = true;
 
     montarMoldura(nome);
     var telas = {
       'boas-vindas': telaBoasVindas, escolher: telaEscolher, inicio: telaInicio,
       abastecer: telaAbastecer, manutencao: telaManutencao, historico: telaHistorico,
-      relatorios: telaRelatorios, ajustes: telaAjustes, carro: telaCarro, ajuda: telaAjuda, familia: telaFamilia
+      relatorios: telaRelatorios, ajustes: telaAjustes, carro: telaCarro, ajuda: telaAjuda, familia: telaFamilia,
+      arquivo: telaArquivo
     };
     (telas[nome] || telaInicio)(r.param);
     if (manterRolagem !== true) window.scrollTo(0, 0);
@@ -345,49 +365,43 @@
     else if (acao === 'demo') carregarDemo();
     else if (acao === 'sair-conta') sairDaConta();
     else if (acao === 'importar-antigos') importarAntigos();
+    else if (acao === 'reativar-carro') reativarCarro(id);
   });
 
   // =====================================================================
   // Tela: boas-vindas (primeiro uso)
   // =====================================================================
   function telaBoasVindas() {
-    tela.innerHTML =
-      '<h1>Controle do Carro</h1>' +
-      '<p>Aqui vocês anotam os abastecimentos e as manutenções do carro. O aplicativo calcula sozinho o consumo, os gastos e avisa quando chegar a hora da troca de óleo.</p>' +
-      '<div class="cartao"><form id="form-inicio" novalidate>' +
-      '<h2>Vamos começar</h2>' +
-      '<div class="campo"><label for="nome1">Nome do primeiro carro</label>' +
-      '<input type="text" id="nome1" value="Carro 1" maxlength="40" autocomplete="off">' +
-      '<span class="dica">Exemplo: “Carro do Pai”, “Gol prata”.</span></div>' +
-      '<div class="campo"><label for="nome2">Nome do segundo carro <span class="opcional">(deixe em branco se for só um)</span></label>' +
-      '<input type="text" id="nome2" value="Carro 2" maxlength="40" autocomplete="off"></div>' +
-      '<div id="erros-inicio"></div>' +
-      '<button class="botao botao-principal botao-grande" type="submit">Começar</button>' +
-      '</form></div>' +
-      (dadosAntigosDoAparelho() ? '<div class="cartao"><h2>Já usava o aplicativo neste celular?</h2>' +
+    var arquivados = carrosArquivados();
+    var h = '<h1>Nenhum carro cadastrado ainda</h1>' +
+      '<p>Cadastre o primeiro carro da família. Depois é só anotar os abastecimentos e as manutenções: o aplicativo calcula o consumo, os gastos e avisa quando chegar a hora da troca de óleo.</p>' +
+      '<a class="botao botao-carro botao-grande" href="#carro/novo">Cadastrar primeiro carro</a>' +
+      '<p class="legenda-simples">Mais carros podem ser adicionados depois, em Ajustes.</p>';
+    if (arquivados.length) {
+      h += '<div class="cartao"><h2>Carros arquivados</h2><p>Estes carros estão guardados com todos os registros.</p>' +
+        arquivados.map(htmlCarroArquivado).join('') + '</div>';
+    }
+    h += (dadosAntigosDoAparelho() ? '<div class="cartao"><h2>Já usava o aplicativo neste celular?</h2>' +
         '<p>Encontramos registros da versão antiga guardados neste aparelho. Você pode enviá-los para a nuvem.</p>' +
-        '<button class="botao botao-principal" type="button" data-acao="importar-antigos">Enviar registros antigos para a nuvem</button></div>' : '') +
+        '<button class="botao botao-secundario" type="button" data-acao="importar-antigos">Enviar registros antigos para a nuvem</button></div>' : '') +
       '<div class="cartao"><h2>Tem uma cópia de segurança?</h2>' +
       '<p>Se você tem um arquivo de cópia salvo pelo aplicativo, pode trazê-lo para cá.</p>' +
       '<button class="botao botao-secundario" type="button" data-acao="restaurar">Usar cópia de segurança</button></div>' +
       '<div class="cartao"><h2>Pessoas com acesso</h2><p>Autorize os e-mails da família para que todos vejam os mesmos dados.</p>' +
       '<a class="botao botao-secundario" href="#familia">Pessoas com acesso</a></div>' +
       '<p class="legenda-simples"><a href="#ajuda">Ajuda</a> • <button type="button" class="link-botao" data-acao="sair-conta">Sair da conta</button></p>';
+    tela.innerHTML = h;
+  }
 
-    $('#form-inicio').addEventListener('submit', function (ev) {
-      ev.preventDefault();
-      var n1 = $('#nome1').value.trim(), n2 = $('#nome2').value.trim();
-      if (!n1) { $('#erros-inicio').innerHTML = caixa('erro', 'Escreva o nome do primeiro carro.'); return; }
-      var novos = [novoCarro(n1, CORES[0].valor)];
-      if (n2) { novos.push(novoCarro(n2, CORES[1].valor)); novos[1].criadoEm = novos[0].criadoEm + 1; }
-      Dados.lotes(novos.map(function (c) { return { tipo: 'set', colecao: 'veiculos', id: c.id, dados: c }; }));
-      estado.carroAtual = novos[0].id;
-      salvar();
-      sessao.escolheuCarro = estado.carros.length < 2;
-      aviso('Tudo pronto!', 'Agora registre a <strong>última troca de óleo</strong> de cada carro (em Registrar manutenção) para receber os avisos da próxima troca.', function () {
-        ir(estado.carros.length > 1 ? 'escolher' : 'inicio', true);
-      });
-    });
+  // Linha de um carro arquivado, com as duas ações possíveis.
+  function htmlCarroArquivado(c) {
+    var n = abastDoCarro(c.id).length, m = manutDoCarro(c.id).length;
+    return '<div class="carro-arquivado" style="--tom:' + tom(c.cor) + '">' +
+      '<p class="carro-arquivado-nome"><span class="ponto-carro" aria-hidden="true"></span>' + esc(c.nome) + '</p>' +
+      '<p class="legenda-simples">' + C.plural(n, 'abastecimento', 'abastecimentos') + ' e ' + C.plural(m, 'manutenção', 'manutenções') +
+      (c.arquivadoEm ? ' • arquivado em ' + C.fmtData(C.dataISO(new Date(c.arquivadoEm))) : '') + '</p>' +
+      '<div class="botoes-lado"><a class="botao botao-secundario botao-pequeno" href="#arquivo/' + encodeURIComponent(c.id) + '">Ver histórico</a>' +
+      '<button class="botao botao-secundario botao-pequeno" type="button" data-acao="reativar-carro" data-id="' + esc(c.id) + '">Reativar</button></div></div>';
   }
 
   function novoCarro(nome, cor) {
@@ -398,17 +412,27 @@
   // Tela: escolher carro
   // =====================================================================
   function telaEscolher() {
+    var ativos = carrosAtivos().slice();
+    // O último carro usado neste aparelho aparece primeiro.
+    ativos.sort(function (a, b) { return (b.id === estado.carroAtual ? 1 : 0) - (a.id === estado.carroAtual ? 1 : 0); });
+    var compacta = ativos.length > 3;
     var h = '<h1>Qual carro você quer ver?</h1><p>Toque no carro.</p>';
-    estado.carros.forEach(function (c) {
+    if (ativos.length > 6) {
+      h += '<div class="campo"><label for="busca-carro">Procurar pelo nome</label>' +
+        '<input type="text" id="busca-carro" autocomplete="off" placeholder="Ex.: Gol"></div>';
+    }
+    h += '<div class="lista-carros' + (compacta ? ' lista-compacta' : '') + '">';
+    ativos.forEach(function (c) {
       var r = resumoCarro(c);
       var pior = r.lembretes.filter(function (l) { return l.situacao === 'atrasada' || l.situacao === 'proxima'; })[0];
-      h += '<button type="button" class="escolha-carro" data-carro="' + esc(c.id) + '" style="--tom:' + tom(c.cor) + '">' +
+      h += '<button type="button" class="escolha-carro" data-carro="' + esc(c.id) + '" data-nome="' + esc(c.nome.toLowerCase()) + '" style="--tom:' + tom(c.cor) + '">' +
         '<span class="nome">' + esc(c.nome) + '</span>' +
         (descricaoCarro(c) ? '<span class="sub">' + esc(descricaoCarro(c)) + '</span>' : '') +
         '<span class="sub">' + (r.km !== null ? 'Quilometragem: ' + C.fmtKm(r.km) : 'Nenhum registro ainda') + '</span>' +
         (pior ? '<span class="alerta alerta-' + pior.situacao + '">' + esc(pior.nome) + (pior.situacao === 'atrasada' ? ' atrasada' : ' chegando') + '</span>' : '') +
         '</button>';
     });
+    h += '</div><p class="vazio" id="busca-vazia" hidden>Nenhum carro com esse nome.</p>';
     tela.innerHTML = h;
     $$('[data-carro]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -417,6 +441,11 @@
         salvar();
         ir('inicio', true);
       });
+    });
+    if ($('#busca-carro')) $('#busca-carro').addEventListener('input', function () {
+      var t = this.value.trim().toLowerCase(), algum = false;
+      $$('[data-carro]').forEach(function (b) { var ok = !t || b.getAttribute('data-nome').indexOf(t) >= 0; b.hidden = !ok; algum = algum || ok; });
+      $('#busca-vazia').hidden = algum;
     });
   }
 
@@ -535,6 +564,8 @@
     var carro = carroAtual();
     var reg = id ? estado.abastecimentos.filter(function (a) { return a.id === id; })[0] : null;
     if (id && !reg) { ir('historico', true); return; }
+    if (reg && carroArquivado(reg.carroId)) { avisarArquivado(reg.carroId); return; }
+    if (!carro) { ir('inicio', true); return; }
     if (reg && reg.carroId !== carro.id) { estado.carroAtual = reg.carroId; carro = carroAtual(); montarMoldura('abastecer'); }
 
     var outros = abastDoCarro(carro.id).filter(function (a) { return !reg || a.id !== reg.id; });
@@ -610,6 +641,7 @@
 
     $('#form-abast').addEventListener('submit', function (ev) {
       ev.preventDefault();
+      if (carroArquivado(carro.id)) return mostrarErros(['Este carro foi arquivado. Reative-o em Ajustes para anotar abastecimentos.']);
       var problemas = [];
       function num(sel, nome, inteiro) {
         var el = $(sel);
@@ -701,6 +733,7 @@
   function apagarAbastecimento(id) {
     var a = estado.abastecimentos.filter(function (x) { return x.id === id; })[0];
     if (!a) return;
+    if (carroArquivado(a.carroId)) { avisarArquivado(a.carroId); return; }
     confirmar({
       icone: '', titulo: 'Apagar este abastecimento?', perigo: true,
       texto: 'Abastecimento de <strong>' + C.fmtData(a.data) + '</strong>, ' + C.fmtNum(a.litros, 2) + ' litros, ' + C.fmtDinheiro(a.valor) +
@@ -723,6 +756,8 @@
     var carro = carroAtual();
     var reg = id ? estado.manutencoes.filter(function (m) { return m.id === id; })[0] : null;
     if (id && !reg) { ir('historico', true); return; }
+    if (reg && carroArquivado(reg.carroId)) { avisarArquivado(reg.carroId); return; }
+    if (!carro) { ir('inicio', true); return; }
     if (reg && reg.carroId !== carro.id) { estado.carroAtual = reg.carroId; carro = carroAtual(); montarMoldura('manutencao'); }
     var r = resumoCarro(carro);
     var hoje = C.hojeISO();
@@ -808,6 +843,7 @@
 
     $('#form-manut').addEventListener('submit', function (ev) {
       ev.preventDefault();
+      if (carroArquivado(carro.id)) return mostrarErros(['Este carro foi arquivado. Reative-o em Ajustes para anotar manutenções.']);
       var problemas = [];
       function num(sel, nome, inteiro) {
         var t = $(sel).value.trim();
@@ -854,6 +890,7 @@
   function apagarManutencao(id) {
     var m = estado.manutencoes.filter(function (x) { return x.id === id; })[0];
     if (!m) return;
+    if (carroArquivado(m.carroId)) { avisarArquivado(m.carroId); return; }
     confirmar({
       icone: '', titulo: 'Apagar esta manutenção?', perigo: true,
       texto: '<strong>' + esc(C.nomeManutencao(m)) + '</strong> de ' + C.fmtData(m.data) + ', no carro <strong>' +
@@ -889,13 +926,33 @@
 
   function telaHistorico() {
     var carro = carroAtual();
+    if (!carro) { ir('inicio', true); return; }
+    historico(carro, false, '<h1>Histórico</h1>');
+  }
+
+  // Histórico de um carro arquivado: somente leitura (sem registrar, corrigir ou apagar).
+  function telaArquivo(id) {
+    var carro = carroPorId(id);
+    if (!carro) { ir('ajustes', true); return; }
+    if (!carro.arquivado) { estado.carroAtual = carro.id; sessao.escolheuCarro = true; ir('historico', true); return; }
+    var cab = '<p><button type="button" class="link-botao" data-acao="voltar">← Voltar</button></p>' +
+      '<div class="arquivo-cabecalho" style="--tom:' + tom(carro.cor) + '">' +
+      '<p class="arquivo-nome"><span class="ponto-carro" aria-hidden="true"></span>' + esc(carro.nome) + '</p>' +
+      '<p class="legenda-simples">Carro arquivado' + (carro.arquivadoEm ? ' em ' + C.fmtData(C.dataISO(new Date(carro.arquivadoEm))) : '') +
+      '. Este histórico é <strong>somente leitura</strong>: para anotar ou corrigir algo, reative o carro.</p>' +
+      '<button class="botao botao-secundario" type="button" data-acao="reativar-carro" data-id="' + esc(carro.id) + '">Reativar este carro</button></div>' +
+      '<h1>Histórico</h1>';
+    historico(carro, true, cab);
+  }
+
+  function historico(carro, somenteLeitura, cabecalho) {
     var r = resumoCarro(carro);
     var hoje = C.hojeISO();
     var de, ate;
     if (sessao.periodoHistorico === 'datas') { de = sessao.deHistorico || null; ate = sessao.ateHistorico || null; }
     else { de = inicioPeriodo(sessao.periodoHistorico, hoje); ate = null; }
 
-    var h = '<h1>Histórico</h1>';
+    var h = cabecalho;
     h += '<div class="abas" role="group" aria-label="O que mostrar">' +
       '<button type="button" data-aba="abastecimentos" aria-pressed="' + (sessao.abaHistorico === 'abastecimentos') + '">Abastecimentos</button>' +
       '<button type="button" data-aba="manutencoes" aria-pressed="' + (sessao.abaHistorico === 'manutencoes') + '">Manutenções</button></div>';
@@ -917,11 +974,11 @@
           'Total gasto: <strong>' + C.fmtDinheiro(total) + '</strong><br>' + C.fmtNum(litros, 1) + ' litros' +
           (km ? ' • ' + C.fmtKm(km) + ' rodados' : '') +
           (lt ? '<br>Consumo médio: <strong>' + C.fmtNum(dist / lt, 1) + ' km/L</strong>' : '') + '</div>';
-        lista.forEach(function (a) { h += htmlAbastecimento(a); });
+        lista.forEach(function (a) { h += htmlAbastecimento(a, somenteLeitura); });
       } else {
         h += vazio('', r.abastecimentos.length ? 'Nenhum abastecimento neste período. Tente “Tudo”.' : 'Nenhum abastecimento registrado ainda.');
       }
-      h += '<a class="botao botao-carro" href="#abastecer">Registrar abastecimento</a>';
+      if (!somenteLeitura) h += '<a class="botao botao-carro" href="#abastecer">Registrar abastecimento</a>';
     } else {
       var ms = r.manutencoes.filter(function (m) { return dentroDoPeriodo(m.data, de, ate); }).sort(function (a, b) {
         if (a.data !== b.data) return a.data < b.data ? 1 : -1;
@@ -931,11 +988,11 @@
         var gasto = ms.reduce(function (s, m) { return s + (m.valor || 0); }, 0);
         h += '<div class="resumo-periodo"><strong>' + C.plural(ms.length, 'manutenção', 'manutenções') + '</strong> no período' +
           (gasto ? '<br>Total gasto: <strong>' + C.fmtDinheiro(gasto) + '</strong>' : '') + '</div>';
-        ms.forEach(function (m) { h += htmlManutencao(m); });
+        ms.forEach(function (m) { h += htmlManutencao(m, somenteLeitura); });
       } else {
         h += vazio('', r.manutencoes.length ? 'Nenhuma manutenção neste período. Tente “Tudo”.' : 'Nenhuma manutenção registrada ainda.');
       }
-      h += '<a class="botao botao-carro" href="#manutencao">Registrar manutenção</a>';
+      if (!somenteLeitura) h += '<a class="botao botao-carro" href="#manutencao">Registrar manutenção</a>';
     }
     tela.innerHTML = h;
 
@@ -951,7 +1008,7 @@
     return '<div class="vazio"><p>' + esc(texto) + '</p></div>';
   }
 
-  function htmlAbastecimento(a) {
+  function htmlAbastecimento(a, somenteLeitura) {
     var calc = [];
     if (a.kmDesdeAnterior !== null) calc.push('Andou ' + C.fmtKm(a.kmDesdeAnterior));
     if (a.trecho) calc.push('<strong>' + C.fmtNum(a.trecho.kmPorLitro, 1) + ' km/L</strong>', C.fmtDinheiro(a.trecho.custoPorKm) + '/km');
@@ -970,11 +1027,11 @@
       (a.combustivel ? ' • ' + esc(a.combustivel) : '') + (a.tanqueCheio === false ? ' <span class="etiqueta">não completou</span>' : '') + '</p>' +
       '<p class="calc">' + calcTxt + '</p>' +
       (a.obs ? '<p class="obs">' + esc(a.obs) + '</p>' : '') +
-      '<div class="acoes"><a class="botao botao-secundario" href="#abastecer/' + encodeURIComponent(a.id) + '">Corrigir</a>' +
-      '<button class="botao botao-perigo" type="button" data-acao="apagar-abast" data-id="' + esc(a.id) + '">Apagar</button></div></div>';
+      (somenteLeitura ? '' : '<div class="acoes"><a class="botao botao-secundario" href="#abastecer/' + encodeURIComponent(a.id) + '">Corrigir</a>' +
+      '<button class="botao botao-perigo" type="button" data-acao="apagar-abast" data-id="' + esc(a.id) + '">Apagar</button></div>') + '</div>';
   }
 
-  function htmlManutencao(m) {
+  function htmlManutencao(m, somenteLeitura) {
     var lemb = [];
     if (m.lembreteKm) lemb.push('daqui a ' + C.fmtKm(m.lembreteKm) + ' (com ' + C.fmtKm(m.km + m.lembreteKm) + ')');
     if (m.lembreteData) lemb.push('em ' + C.fmtData(m.lembreteData));
@@ -983,8 +1040,8 @@
       '<p class="detalhes"><strong>' + esc(C.nomeManutencao(m)) + '</strong> • ' + C.fmtKm(m.km) + '</p>' +
       (lemb.length ? '<p class="calc">Lembrete: ' + lemb.join(' ou ') + '</p>' : '') +
       (m.obs ? '<p class="obs">' + esc(m.obs) + '</p>' : '') +
-      '<div class="acoes"><a class="botao botao-secundario" href="#manutencao/' + encodeURIComponent(m.id) + '">Corrigir</a>' +
-      '<button class="botao botao-perigo" type="button" data-acao="apagar-manut" data-id="' + esc(m.id) + '">Apagar</button></div></div>';
+      (somenteLeitura ? '' : '<div class="acoes"><a class="botao botao-secundario" href="#manutencao/' + encodeURIComponent(m.id) + '">Corrigir</a>' +
+      '<button class="botao botao-perigo" type="button" data-acao="apagar-manut" data-id="' + esc(m.id) + '">Apagar</button></div>') + '</div>';
   }
 
   // =====================================================================
@@ -1128,13 +1185,19 @@
   function telaAjustes() {
     var h = '<h1>Ajustes</h1>';
     h += '<div class="cartao"><h2>Carros</h2>';
-    estado.carros.forEach(function (c) {
+    carrosAtivos().forEach(function (c) {
       h += '<a class="botao botao-secundario" href="#carro/' + encodeURIComponent(c.id) + '" style="justify-content:flex-start">' +
         '<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:' + tom(c.cor) + '"></span> Dados do ' + esc(c.nome) + '</a>';
     });
-    if (estado.carros.length < MAX_CARROS) h += '<a class="botao botao-secundario" href="#carro/novo">Adicionar outro carro</a>';
-    if (estado.carros.length > 1) h += '<button class="botao botao-secundario" type="button" data-acao="trocar-carro">Trocar o carro que estou vendo</button>';
-    h += '<p class="legenda-simples">Nos dados de cada carro você também muda o intervalo da troca de óleo.</p></div>';
+    h += '<a class="botao botao-principal" href="#carro/novo">Adicionar carro</a>';
+    if (carrosAtivos().length > 1) h += '<button class="botao botao-secundario" type="button" data-acao="trocar-carro">Trocar o carro que estou vendo</button>';
+    h += '<p class="legenda-simples">Nos dados de cada carro você muda o intervalo da troca de óleo e pode arquivar o carro.</p></div>';
+    var arquivados = carrosArquivados();
+    if (arquivados.length) {
+      h += '<div class="cartao"><h2>Carros arquivados</h2>' +
+        '<p>Guardados com todos os abastecimentos e manutenções. Não recebem registros novos.</p>' +
+        arquivados.map(htmlCarroArquivado).join('') + '</div>';
+    }
 
     if (!estado.demo) {
       h += '<div class="cartao"><h2>Família</h2>' +
@@ -1184,19 +1247,18 @@
   // =====================================================================
   function telaCarro(id) {
     var novo = id === 'novo';
-    if (novo && estado.carros.length >= MAX_CARROS) { ir('ajustes', true); return; }
-    var c = novo ? novoCarro('Carro ' + (estado.carros.length + 1), CORES.filter(function (k) {
-      return !estado.carros.some(function (x) { return x.cor === k.valor; });
-    })[0].valor) : carroPorId(id);
+    var primeiro = novo && !carrosAtivos().length;
+    var c = novo ? novoCarro('', proximaCor()) : carroPorId(id);
     if (!c) { ir('ajustes', true); return; }
+    if (c.arquivado) { ir('arquivo/' + encodeURIComponent(c.id), true); return; }
 
-    var h = '<h1>' + (novo ? 'Novo carro' : 'Dados do carro') + '</h1><form id="form-carro" novalidate><div id="erros"></div>';
-    h += '<div class="campo"><label for="nome">Nome do carro</label><input type="text" id="nome" maxlength="40" value="' + esc(c.nome) + '">' +
-      '<span class="dica">Como vocês chamam este carro. Ex.: “Carro do Pai”.</span></div>';
+    var h = '<h1>' + (primeiro ? 'Primeiro carro' : novo ? 'Novo carro' : 'Dados do carro') + '</h1><form id="form-carro" novalidate><div id="erros"></div>';
+    h += '<div class="campo"><label for="nome">Nome do carro</label><input type="text" id="nome" maxlength="40" value="' + esc(c.nome) + '" placeholder="Ex.: Carro do Pai">' +
+      '<span class="dica">Como vocês chamam este carro. Ex.: “Carro do Pai”, “Gol prata”.</span></div>';
     h += '<div class="campo"><label for="marca">Marca <span class="opcional">(opcional)</span></label><input type="text" id="marca" maxlength="30" value="' + esc(c.marca) + '" placeholder="Ex.: Fiat"></div>';
     h += '<div class="campo"><label for="modelo">Modelo <span class="opcional">(opcional)</span></label><input type="text" id="modelo" maxlength="30" value="' + esc(c.modelo) + '" placeholder="Ex.: Uno"></div>';
     h += '<div class="campo"><label for="ano">Ano <span class="opcional">(opcional)</span></label><input type="text" id="ano" inputmode="numeric" maxlength="4" value="' + esc(c.ano) + '" placeholder="Ex.: 2015"></div>';
-    h += '<div class="campo"><span class="rotulo" id="rot-cor">Cor na tela</span><span class="dica" style="margin:0 0 8px">Ajuda a não confundir os carros: o topo da tela fica desta cor.</span>' +
+    h += '<div class="campo"><span class="rotulo" id="rot-cor">Cor na tela</span><span class="dica" style="margin:0 0 8px">Ajuda a não confundir os carros: um ponto desta cor aparece ao lado do nome. Pode repetir a cor de outro carro.</span>' +
       '<div class="opcoes" role="radiogroup" aria-labelledby="rot-cor">' + CORES.map(function (k) {
         return '<label class="opcao"><input type="radio" name="cor" value="' + k.valor + '"' + (c.cor === k.valor ? ' checked' : '') + '>' +
           '<span><span style="display:inline-block;width:18px;height:18px;border-radius:50%;margin-right:6px;background:' + tom(k.valor) + '"></span>' + k.nome + '</span></label>';
@@ -1205,9 +1267,16 @@
     h += campoNumero('oleoKm', 'Trocar o óleo a cada', textoNumero(c.oleoKm), 'km', 'O padrão é 5.000 km. Confira no manual do carro. Deixe em branco para não ser avisado por quilometragem.', { inteiro: true });
     h += campoNumero('oleoMeses', 'Ou a cada quantos meses', c.oleoMeses ? String(c.oleoMeses) : '', 'meses', 'Opcional. Ex.: 6 ou 12. Será avisado o que vier primeiro.', { inteiro: true, opcional: true });
     h += '<button class="botao botao-principal botao-grande" type="submit">Salvar</button>';
-    h += '<a class="botao botao-secundario" href="#ajustes">Cancelar</a>';
-    if (!novo && estado.carros.length > 1) h += '<button class="botao botao-perigo" type="button" id="remover-carro">Remover este carro</button>';
+    h += '<a class="botao botao-secundario" href="' + (primeiro ? '#inicio' : '#ajustes') + '">Cancelar</a>';
     h += '</form>';
+    if (!novo) {
+      h += '<hr class="separador"><h2>Guardar ou apagar</h2>' +
+        '<p>Se a família não usa mais este carro, <strong>arquive</strong>: ele sai da lista, mas todos os abastecimentos e manutenções ficam guardados e podem ser consultados ou reativados em Ajustes.</p>' +
+        '<button class="botao botao-secundario" type="button" id="arquivar-carro">Arquivar este carro</button>' +
+        '<details class="mais"><summary>Apagar este carro de vez</summary>' +
+        '<p>Apaga o carro <strong>e todos os registros dele</strong>, em todos os celulares. Prefira arquivar.</p>' +
+        '<button class="botao botao-perigo" type="button" id="remover-carro">Apagar carro e todos os registros</button></details>';
+    }
     tela.innerHTML = h;
 
     $('#form-carro').addEventListener('submit', function (ev) {
@@ -1228,29 +1297,58 @@
         cor: ($('input[name=cor]:checked') || {}).value || c.cor, oleoKm: oleoKm || 0, oleoMeses: oleoMeses || null };
       var atualizado = Object.assign({}, c, dados);
       Dados.gravar('veiculos', atualizado);
-      if (novo) estado.carroAtual = atualizado.id;
+      if (novo) { estado.carroAtual = atualizado.id; sessao.escolheuCarro = true; }
       salvar();
-      aviso('Salvo!', novo ? 'O carro <strong>' + esc(nome) + '</strong> foi adicionado e agora está selecionado.' : 'Os dados do carro foram atualizados.', function () { ir(novo ? 'inicio' : 'ajustes', true); });
+      var msg = primeiro
+        ? 'O carro <strong>' + esc(nome) + '</strong> foi cadastrado. Agora registre a <strong>última troca de óleo</strong> dele (em Registrar manutenção) para receber o aviso da próxima.'
+        : novo ? 'O carro <strong>' + esc(nome) + '</strong> foi adicionado e agora está selecionado.' : 'Os dados do carro foram atualizados.';
+      aviso(primeiro ? 'Tudo pronto!' : 'Salvo!', msg, function () { ir(novo ? 'inicio' : 'ajustes', true); });
+    });
+
+    if ($('#arquivar-carro')) $('#arquivar-carro').addEventListener('click', function () {
+      var nA = abastDoCarro(c.id).length, nM = manutDoCarro(c.id).length;
+      confirmar({
+        titulo: 'Arquivar o ' + c.nome + '?',
+        texto: 'Ele sai da lista de carros e não recebe registros novos. Os ' + C.plural(nA, 'abastecimento', 'abastecimentos') + ' e ' +
+          C.plural(nM, 'manutenção', 'manutenções') + ' continuam guardados. Você pode ver o histórico ou reativar em Ajustes.',
+        sim: 'Sim, arquivar', nao: 'Cancelar',
+        aoConfirmar: function () {
+          Dados.gravar('veiculos', Object.assign({}, c, { arquivado: true, arquivadoEm: Date.now() }));
+          carroAtual();
+          salvar();
+          aviso('Carro arquivado', 'O <strong>' + esc(c.nome) + '</strong> está em Ajustes → Carros arquivados.', function () { ir('ajustes', true); });
+        }
+      });
     });
 
     if ($('#remover-carro')) $('#remover-carro').addEventListener('click', function () {
       var nA = abastDoCarro(c.id).length, nM = manutDoCarro(c.id).length;
       confirmar({
-        icone: '', titulo: 'Remover o ' + c.nome + '?', perigo: true,
-        texto: 'Serão apagados também ' + C.plural(nA, 'abastecimento', 'abastecimentos') + ' e ' + C.plural(nM, 'manutenção', 'manutenções') + ' deste carro. Isso não pode ser desfeito.',
-        sim: 'Sim, remover', nao: 'Não, manter',
-        aoConfirmar: function () {
+        titulo: 'Apagar o ' + c.nome + ' de vez?', perigo: true,
+        texto: 'Serão apagados também ' + C.plural(nA, 'abastecimento', 'abastecimentos') + ' e ' + C.plural(nM, 'manutenção', 'manutenções') + ' deste carro, em todos os celulares. Isso não pode ser desfeito. Para só guardar, use “Arquivar”.',
+        sim: 'Continuar', nao: 'Não, manter',
+        aoConfirmar: function () { confirmar({ titulo: 'Tem certeza mesmo?', perigo: true, texto: 'Última confirmação.', sim: 'Sim, apagar tudo deste carro', nao: 'Cancelar', aoConfirmar: function () {
           var ops = [];
           abastDoCarro(c.id).forEach(function (x) { ops.push({ tipo: 'delete', colecao: 'abastecimentos', id: x.id }); });
           manutDoCarro(c.id).forEach(function (x) { ops.push({ tipo: 'delete', colecao: 'manutencoes', id: x.id }); });
           ops.push({ tipo: 'delete', colecao: 'veiculos', id: c.id });
           Dados.lotes(ops);
-          estado.carroAtual = estado.carros[0] ? estado.carros[0].id : null;
+          carroAtual();
           salvar();
           ir('inicio', true);
-        }
+        } }); }
       });
     });
+  }
+
+  function reativarCarro(id) {
+    var c = carroPorId(id);
+    if (!c) return;
+    Dados.gravar('veiculos', Object.assign({}, c, { arquivado: false, arquivadoEm: null }));
+    if (carrosAtivos().length === 1) { estado.carroAtual = c.id; sessao.escolheuCarro = true; }
+    salvar();
+    aviso('Carro reativado', 'O <strong>' + esc(c.nome) + '</strong> voltou para a lista de carros e pode receber registros de novo.',
+      function () { ir(rotaAtual().nome === 'arquivo' ? 'ajustes' : rotaAtual().nome, true); });
   }
 
   // =====================================================================
@@ -1396,14 +1494,10 @@
     function perguntar(i) {
       if (i >= semDestino.length) return concluir();
       var c = semDestino[i];
-      var vagas = MAX_CARROS - estado.carros.length - criar.length;
       var acoes = { pular: function () { perguntar(i + 1); } };
-      var botoes = '';
-      if (vagas > 0) {
-        acoes.novo = function () { criar.push(c); mapa[c.id] = c.id; perguntar(i + 1); };
-        botoes += '<button class="botao botao-principal" data-janela="novo">Criar como carro novo</button>';
-      }
-      estado.carros.forEach(function (x, k) {
+      acoes.novo = function () { criar.push(c); mapa[c.id] = c.id; perguntar(i + 1); };
+      var botoes = '<button class="botao botao-principal" data-janela="novo">Criar como carro novo</button>';
+      carrosAtivos().forEach(function (x, k) {
         acoes['c' + k] = function () { mapa[c.id] = x.id; perguntar(i + 1); };
         botoes += '<button class="botao botao-secundario" data-janela="c' + k + '">Juntar com ' + esc(x.nome) + '</button>';
       });
@@ -1416,7 +1510,7 @@
     function concluir() {
       var ops = [], qtd = { abastecimentos: 0, manutencoes: 0 };
       criar.forEach(function (c) {
-        ops.push({ tipo: 'set', colecao: 'veiculos', id: c.id, dados: Object.assign({ oleoKm: 5000, cor: CORES[estado.carros.length % CORES.length].valor, criadoEm: Date.now() }, c) });
+        ops.push({ tipo: 'set', colecao: 'veiculos', id: c.id, dados: Object.assign({ oleoKm: 5000, cor: proximaCor(), criadoEm: Date.now() }, c) });
       });
       ['abastecimentos', 'manutencoes'].forEach(function (col) {
         dados[col].forEach(function (r) {
@@ -1435,9 +1529,9 @@
         aoConfirmar: function () {
           Dados.lotes(ops);
           if (aoTerminar) aoTerminar();
-          if (!estado.carroAtual || !carroPorId(estado.carroAtual)) estado.carroAtual = estado.carros[0] && estado.carros[0].id;
+          carroAtual();
           salvar();
-          if (estado.carros.length < 2) sessao.escolheuCarro = true;
+          if (carrosAtivos().length < 2) sessao.escolheuCarro = true;
           aviso('Registros trazidos', 'Os registros já aparecem no aplicativo' + (modo === 'nuvem' ? ' e em todos os celulares da família.' : '.'), function () { ir('inicio', true); });
         }
       });
@@ -1455,7 +1549,7 @@
 
   // Substitui tudo pelos dados da cópia (apaga o que não estiver nela).
   function substituirTudo(dados) {
-    var carros = dados.carros.slice(0, MAX_CARROS);
+    var carros = dados.carros;
     var ids = {}, ops = [];
     carros.forEach(function (c) { ids['veiculos/' + c.id] = true; ops.push({ tipo: 'set', colecao: 'veiculos', id: c.id, dados: Object.assign({ oleoKm: 5000, criadoEm: Date.now() }, c) }); });
     ['abastecimentos', 'manutencoes'].forEach(function (col) {
@@ -1467,7 +1561,8 @@
     });
     var apagar = operacoesApagarTudo().filter(function (op) { return !ids[op.colecao + '/' + op.id]; });
     Dados.lotes(apagar.concat(ops));
-    estado.carroAtual = carros[0] && carros[0].id;
+    estado.carroAtual = null;
+    carroAtual();
     salvar();
     sessao.escolheuCarro = false;
     aviso('Cópia aplicada', 'Os dados agora são os da cópia de segurança.', function () { ir('inicio', true); });
@@ -1521,13 +1616,14 @@
     var linhas = [['Carro', 'Registro', 'Data', 'Quilometragem', 'Litros', 'Valor (R$)', 'Preço por litro (R$)', 'Combustível', 'Tanque cheio',
       'Km rodados', 'Consumo (km/L)', 'Custo por km (R$)', 'Manutenção', 'Lembrete (km)', 'Lembrete (data)', 'Observações'].join(';')];
     estado.carros.forEach(function (c) {
+      var nomeCarro = c.nome + (c.arquivado ? ' (arquivado)' : '');
       C.analisarAbastecimentos(abastDoCarro(c.id)).forEach(function (a) {
-        linhas.push([cel(c.nome), 'Abastecimento', C.fmtData(a.data), a.km, n(a.litros, 2), n(a.valor, 2), n(a.precoLitro, 3), cel(a.combustivel),
+        linhas.push([cel(nomeCarro), 'Abastecimento', C.fmtData(a.data), a.km, n(a.litros, 2), n(a.valor, 2), n(a.precoLitro, 3), cel(a.combustivel),
           a.tanqueCheio === false ? 'Não' : 'Sim', a.kmDesdeAnterior === null ? '' : a.kmDesdeAnterior,
           a.trecho ? n(a.trecho.kmPorLitro, 2) : '', a.trecho ? n(a.trecho.custoPorKm, 3) : '', '', '', '', cel(a.obs)].join(';'));
       });
       manutDoCarro(c.id).slice().sort(function (a, b) { return a.data < b.data ? -1 : 1; }).forEach(function (m) {
-        linhas.push([cel(c.nome), 'Manutenção', C.fmtData(m.data), m.km, '', n(m.valor, 2), '', '', '', '', '', '',
+        linhas.push([cel(nomeCarro), 'Manutenção', C.fmtData(m.data), m.km, '', n(m.valor, 2), '', '', '', '', '', '',
           cel(C.nomeManutencao(m)), m.lembreteKm || '', m.lembreteData ? C.fmtData(m.lembreteData) : '', cel(m.obs)].join(';'));
       });
     });
@@ -1856,7 +1952,7 @@
     if (modo === 'carregando-dados') {
       if (carregado.familia && carregado.veiculos && carregado.abastecimentos && carregado.manutencoes) {
         modo = 'nuvem';
-        if (!carroPorId(estado.carroAtual) && estado.carros.length) estado.carroAtual = estado.carros[0].id;
+        carroAtual();
         desenhar();
         atualizarIndicador();
       }
@@ -1869,8 +1965,7 @@
   // Atualiza a tela com dados vindos de outro celular, sem atrapalhar quem está preenchendo um formulário.
   function redesenharSePossivel() {
     var r = rotaAtual().nome;
-    var preenchendo = ['abastecer', 'manutencao', 'carro', 'familia'].indexOf(r) >= 0 ||
-      (r === 'inicio' && !estado.carros.length && $('#form-inicio') && $('#nome1') && document.activeElement && document.activeElement.tagName === 'INPUT');
+    var preenchendo = ['abastecer', 'manutencao', 'carro', 'familia'].indexOf(r) >= 0;
     if (!janela.hidden || preenchendo) { redesenhoPendente = true; return; }
     var y = window.scrollY;
     desenhar(true);

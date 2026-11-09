@@ -64,15 +64,26 @@ Testes das regras de segurança no emulador do Firestore (precisa de Java 11 ou 
 npm run test:regras
 ```
 
+Testes de tela: abrem o app num navegador de verdade (Playwright) contra os emuladores de login e banco, e conferem o resultado direto no banco do emulador. Precisam de Java e do navegador do Playwright:
+
+```bash
+npx playwright install chromium
+```
+
+```bash
+npm run test:telas
+```
+
 | Teste | Arquivo | O que verifica | Onde foi executado |
 |---|---|---|---|
 | Lógica dos cálculos | [`testes/calculos.test.js`](../testes/calculos.test.js) | 15 testes: leitura de números no formato brasileiro, consumo pelo tanque cheio, validações, lembretes de óleo e pneus | No ambiente de desenvolvimento (Node) e no GitHub Actions |
-| Regras de segurança | [`testes/regras.test.mjs`](../testes/regras.test.mjs) | 41 testes: acesso sem login, e-mail não verificado, isolamento entre famílias, validação dos dados, gravação em lote | No **emulador** do Firestore, no ambiente de desenvolvimento e no GitHub Actions |
+| Regras de segurança | [`testes/regras.test.mjs`](../testes/regras.test.mjs) | 49 testes: acesso sem login, e-mail não verificado, isolamento entre famílias, validação dos dados, gravação em lote, vários carros, arquivar e reativar | No **emulador** do Firestore, no ambiente de desenvolvimento e no GitHub Actions |
+| Telas | [`testes/telas.test.mjs`](../testes/telas.test.mjs) | 14 testes: família começando sem carros, primeiro carro, vários carros com cores repetidas, escolha com busca, registros separados por carro, arquivar sem perder registros, histórico somente leitura, bloqueio de registro em carro arquivado, reativar, restauração e importação sem corte, família antiga sem alteração automática, demonstração | Navegador (Playwright) + **emuladores** de login e Firestore, no ambiente de desenvolvimento |
 | Firebase real | — | Verificação manual em 09/11/2026: a tela de entrada carrega, os logins por Google e por e-mail e senha estão ativos e o Firestore recusa leitura sem login | Projeto de produção. O fluxo completo com contas reais **ainda não foi verificado**, e não há testes automáticos contra o projeto real |
 
-O workflow [`.github/workflows/publicar.yml`](../.github/workflows/publicar.yml) roda os dois conjuntos a cada envio para o `main`. Nas duas primeiras execuções, a etapa de testes passou e a de publicação falhou porque o segredo `FIREBASE_CONFIG` ainda não existia. Na terceira, em 09/11/2026, os testes passaram e o site foi publicado.
+O workflow [`.github/workflows/publicar.yml`](../.github/workflows/publicar.yml) roda esses testes a cada envio para o `main`. Nas duas primeiras execuções, a etapa de testes passou e a de publicação falhou porque o segredo `FIREBASE_CONFIG` ainda não existia. Na terceira, em 09/11/2026, os testes passaram e o site foi publicado.
 
-Não há testes automatizados de tela no repositório. Testar as regras no emulador não substitui uma verificação num projeto Firebase real.
+Testar no emulador não substitui uma verificação num projeto Firebase real.
 
 ---
 
@@ -97,7 +108,7 @@ sw.js, manifest.webmanifest  uso sem internet e “Adicionar à tela inicial”
 
 ```
 familias/{familiaId}                       nome, emails autorizados, quem criou
-familias/{familiaId}/veiculos/{id}         nome, marca, modelo, ano, cor, intervalo da troca de óleo
+familias/{familiaId}/veiculos/{id}         nome, marca, modelo, ano, cor, intervalo da troca de óleo, arquivado
 familias/{familiaId}/abastecimentos/{id}   carroId, data, km, litros, valor, tanqueCheio, combustível, obs
 familias/{familiaId}/manutencoes/{id}      carroId, tipo, data, km, valor, lembretes, obs
 ```

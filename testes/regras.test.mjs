@@ -65,6 +65,26 @@ await teste('membro edita abastecimento', () => assertSucceeds(mae().doc('famili
 await teste('membro apaga abastecimento', () => assertSucceeds(mae().doc('familias/A/abastecimentos/a2').delete()));
 await teste('membro grava manutenção válida', () => assertSucceeds(mae().doc('familias/A/manutencoes/m1').set(manut)));
 await teste('membro grava veículo válido', () => assertSucceeds(filho().doc('familias/A/veiculos/v2').set({ ...veiculo, nome: 'Carro 2' })));
+// ---------- Vários carros e arquivamento ----------
+await teste('não há limite de carros: família cadastra 12 carros', async () => {
+  const db = filho();
+  for (let i = 1; i <= 12; i++) await assertSucceeds(db.doc('familias/A/veiculos/frota' + i).set({ ...veiculo, nome: 'Carro ' + i }));
+});
+await teste('carro antigo, sem os campos novos, continua válido ao ser editado', () =>
+  assertSucceeds(mae().doc('familias/A/veiculos/v1').set({ ...veiculo, nome: 'Carro 1 renomeado' })));
+await teste('arquivar um carro é aceito', () =>
+  assertSucceeds(mae().doc('familias/A/veiculos/v1').set({ ...veiculo, arquivado: true, arquivadoEm: 1767000000000 })));
+await teste('registros do carro arquivado continuam guardados e legíveis', () =>
+  assertSucceeds(mae().doc('familias/A/abastecimentos/a1').get()));
+await teste('reativar um carro é aceito', () =>
+  assertSucceeds(pai().doc('familias/A/veiculos/v1').set({ ...veiculo, arquivado: false, arquivadoEm: null })));
+await teste('"arquivado" que não seja verdadeiro/falso é recusado', () =>
+  assertFails(mae().doc('familias/A/veiculos/v1').set({ ...veiculo, arquivado: 'sim' })));
+await teste('"arquivadoEm" que não seja número é recusado', () =>
+  assertFails(mae().doc('familias/A/veiculos/v1').set({ ...veiculo, arquivado: true, arquivadoEm: 'ontem' })));
+await teste('quem não é da família não arquiva carro', () =>
+  assertFails(estranho().doc('familias/A/veiculos/v1').set({ ...veiculo, arquivado: true, arquivadoEm: 1 })));
+
 await teste('e-mail com maiúsculas no login também vale', () =>
   assertSucceeds(usuario('u-mae', 'Mae@Example.com').doc('familias/A').get()));
 await teste('membro encontra a própria família pela busca por e-mail', () =>

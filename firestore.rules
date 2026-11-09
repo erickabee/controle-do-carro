@@ -44,7 +44,8 @@ service cloud.firestore {
 
     function veiculoValido(d) {
       return d.keys().hasAll(['nome', 'cor', 'oleoKm'])
-        && d.keys().hasOnly(['nome', 'marca', 'modelo', 'ano', 'cor', 'oleoKm', 'oleoMeses', 'criadoEm'])
+        && d.keys().hasOnly(['nome', 'marca', 'modelo', 'ano', 'cor', 'oleoKm', 'oleoMeses', 'criadoEm',
+                             'arquivado', 'arquivadoEm'])
         && d.nome is string && d.nome.size() >= 1 && d.nome.size() <= 40
         && textoAte(d.get('marca', ''), 30)
         && textoAte(d.get('modelo', ''), 30)
@@ -52,7 +53,10 @@ service cloud.firestore {
         && d.cor is string && d.cor.matches('^#[0-9a-fA-F]{6}$')
         && d.oleoKm is number && d.oleoKm >= 0 && d.oleoKm <= 100000
         && (d.get('oleoMeses', null) == null
-            || (d.oleoMeses is int && d.oleoMeses >= 1 && d.oleoMeses <= 48));
+            || (d.oleoMeses is int && d.oleoMeses >= 1 && d.oleoMeses <= 48))
+        // Arquivar: o carro sai da lista, mas os registros continuam guardados.
+        && d.get('arquivado', false) is bool
+        && nuloOuNumero(d.get('arquivadoEm', null));
     }
 
     function abastecimentoValido(d) {

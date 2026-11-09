@@ -28,9 +28,9 @@ Assim ele abre com um toque, como os outros aplicativos.
 
 ## 3. Escolher o carro
 
-Ao abrir, toque no carro que você quer ver.
+A família pode ter um ou mais carros. Se houver mais de um, ao abrir toque no carro que você quer ver. Com muitos carros, dá para procurar pelo nome.
 
-👉 **A faixa colorida no alto da tela mostra o carro escolhido.** Confira sempre antes de salvar. Para mudar, toque em **Trocar carro**.
+👉 **O nome do carro escolhido aparece no alto da tela, com um ponto colorido.** Confira sempre antes de salvar. Para mudar, toque em **Trocar carro**.
 
 ## 4. Anotar um abastecimento
 
@@ -70,6 +70,12 @@ Pode anotar normalmente. Aparece um aviso marrom “Sem internet”, e os regist
 
 **Esqueci a senha, ou quero trocar a senha que recebi.**
 Na tela de entrada, digite seu e-mail e toque em **Esqueci minha senha**. Chega um e-mail com um link para criar a senha que você quiser. (Quem entra com Google não tem senha do aplicativo: usa a do Gmail.)
+
+**Como cadastro outro carro?**
+Toque em **Ajustes** e depois em **Adicionar carro**.
+
+**A família não usa mais um carro. Perco o histórico?**
+Não. Em **Ajustes**, toque no carro e depois em **Arquivar este carro**. Ele sai da lista, mas os abastecimentos e manutenções ficam guardados. Em **Ajustes → Carros arquivados** dá para **Ver histórico** ou **Reativar**.
 
 **Apareceu “Quase lá” ou “Sem acesso”.**
 Seu e-mail ainda não foi liberado. Peça para quem configurou o aplicativo incluir seu e-mail em **Ajustes → Pessoas com acesso**. Depois toque em **Tentar de novo**.
