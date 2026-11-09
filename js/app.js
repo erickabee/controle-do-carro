@@ -291,13 +291,13 @@
 
     topo.hidden = false;
     var desc = descricaoCarro(carro);
-    topo.innerHTML = '<div class="topo-dentro">' +
+    topo.innerHTML = '<div class="topo-dentro' + (rota === 'painel' ? ' topo-painel' : '') + '">' +
       (rota === 'painel' ? '<a class="topo-voltar" href="#inicio" aria-label="Voltar para a Garagem">← Garagem</a>' : '') +
       '<div class="topo-carro">' +
       '<span class="topo-rotulo">' + (rota === 'painel' ? 'Painel do carro' : 'Carro selecionado') + '</span>' +
       '<span class="topo-nome"><span class="ponto-carro" aria-hidden="true"></span>' + esc(carro.nome) + '</span>' +
       (desc ? '<span class="topo-rotulo">' + esc(desc) + '</span>' : '') + '</div>' +
-      (carrosAtivos().length > 1 && !emFormulario && rota !== 'painel' ? '<button type="button" data-acao="trocar-carro">Trocar carro</button>' : '') +
+      (carrosAtivos().length > 1 && !emFormulario ? '<button type="button" data-acao="trocar-carro">Trocar carro</button>' : '') +
       '</div>';
 
     menu.hidden = emFormulario;

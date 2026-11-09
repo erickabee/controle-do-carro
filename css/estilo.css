@@ -428,3 +428,12 @@ table.tabela { width: 100%; border-collapse: collapse; font-size: .95rem; }
 .opcao-carro em { margin-left: auto; font-style: normal; font-size: .85rem; color: var(--acento-escuro); }
 .opcao-carro.atual { border-color: var(--acento); background: var(--acento-claro); }
 .opcao-carro:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+
+/* Painel no celular: botões numa linha ("← Garagem" à esquerda, "Trocar carro" à direita)
+   e o nome do carro inteiro na linha de baixo, sem ser cortado. */
+@media (max-width: 599px) {
+  .topo-painel { flex-wrap: wrap; row-gap: 10px; }
+  .topo-painel .topo-voltar { order: 1; margin-right: auto; }
+  .topo-painel > button { order: 2; }
+  .topo-painel .topo-carro { order: 3; flex: 1 1 100%; }
+}

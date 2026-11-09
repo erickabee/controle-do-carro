@@ -173,6 +173,8 @@ await teste('cadastra o primeiro carro pelo botão "Cadastrar primeiro carro"', 
   await okJanela(p);
   assert.match(await p.textContent('.topo-nome'), /Carro 1/);
   assert.match(await p.evaluate(() => location.hash), /^#painel\//, 'depois de cadastrar, abre o painel do carro novo');
+  assert.ok(await p.isVisible('.topo-voltar'), 'painel tem "← Garagem"');
+  assert.equal(await p.locator('#topo button[data-acao=trocar-carro]').count(), 0, 'com um carro só não há "Trocar carro"');
   await esperarNuvem(async () => (await listar(`familias/${fid}/veiculos`)).length === 1, '1 carro');
 });
 
@@ -203,6 +205,26 @@ await teste('Garagem continua prática com muitos carros (lista compacta e busca
   await p.click('.escolha-carro:visible');
   await p.waitForSelector('.topo-nome:has-text("Carro 3")');
   assert.ok(await p.isVisible('.topo-voltar:has-text("Garagem")'), 'painel tem "← Garagem"');
+});
+
+await teste('no painel, "Trocar carro" alterna direto para outro carro e "← Garagem" volta à lista', async () => {
+  await escolher(p, 'Carro 3');
+  assert.ok(await p.isVisible('.topo-voltar:has-text("Garagem")'));
+  assert.ok(await p.isVisible('#topo button[data-acao=trocar-carro]'));
+  // no celular (390 px) o nome do carro aparece inteiro, sem ser cortado pelos dois botões
+  assert.ok(await p.evaluate(() => { const n = document.querySelector('.topo-nome'); return n.scrollWidth <= n.clientWidth; }), 'nome do carro inteiro');
+  await p.click('#topo button[data-acao=trocar-carro]');
+  await p.waitForSelector('.lista-trocar');
+  assert.ok(await p.isVisible('.opcao-carro.atual:has-text("Carro 3")'), 'o carro atual vem marcado');
+  await p.click('.opcao-carro:has-text("Carro 5")');
+  await p.waitForSelector('.topo-nome:has-text("Carro 5")');
+  const c5 = (await listar(`familias/${fid}/veiculos`)).find(c => c.nome === 'Carro 5');
+  assert.equal(await p.evaluate(() => location.hash), '#painel/' + c5.id, 'vai direto para o painel do outro carro, sem passar pela Garagem');
+  assert.ok(await p.isVisible('a:has-text("Registrar abastecimento")'));
+  await p.click('.topo-voltar');
+  await p.waitForSelector('.garagem');
+  assert.equal(await p.textContent('h1'), 'Garagem');
+  assert.equal(await p.locator('.garagem .escolha-carro').count(), 8, '"← Garagem" mostra a lista completa');
 });
 
 await teste('entrar de novo abre a Garagem, sem pedir para escolher carro', async () => {

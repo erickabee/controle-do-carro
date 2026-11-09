@@ -30,7 +30,7 @@ Assim ele abre com um toque, como os outros aplicativos.
 
 Ao abrir, aparece a **Garagem** com todos os carros da família. Cada cartão mostra a quilometragem e o próximo aviso de manutenção. **Toque no carro** para abrir o painel dele. Com muitos carros, dá para procurar pelo nome.
 
-👉 **Dentro do carro, o nome dele aparece no alto da tela, com um ponto colorido.** Confira sempre antes de salvar. Para voltar e escolher outro carro, toque em **← Garagem** (ou no botão **Garagem** do menu).
+👉 **Dentro do carro, o nome dele aparece no alto da tela, com um ponto colorido.** Confira sempre antes de salvar. Para ir direto a outro carro, toque em **Trocar carro** e escolha na lista. Para voltar à lista completa, toque em **← Garagem** (ou no botão **Garagem** do menu).
 
 No **Histórico** e nos **Relatórios**, a linha **"Mostrando: …"** diz de qual carro são os números. Toque em **Trocar** para ver outro carro sem sair da tela.
 
