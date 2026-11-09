@@ -91,7 +91,8 @@ Sem o segredo `FIREBASE_CONFIG`, a etapa de publicação falha de propósito, co
 2. Em **Ajustes → Pessoas com acesso**, inclua o e-mail de cada pessoa.
 3. Para cada pessoa:
    - **Tem conta Google (Gmail):** ela só precisa tocar em **Entrar com Google**.
-   - **Vai usar e-mail e senha:** no Console do Firebase, em **Authentication → Usuários → Adicionar usuário**, informe o e-mail e uma senha e passe a senha para ela. No primeiro acesso o app pede para confirmar o e-mail, tocando no link que chega na caixa de entrada.
+   - **Não tem Gmail (vai usar e-mail e senha):** a pessoa não cria a senha no app. **Você** cria a conta no Console do Firebase, em **Authentication → Usuários → Adicionar usuário**: digite o e-mail dela e uma senha escolhida por você (mínimo de 6 caracteres). Anote a senha nesse momento e passe para a pessoa, porque o Firebase **não mostra a senha depois**. No primeiro acesso o app pede para confirmar o e-mail, tocando no link que chega na caixa de entrada.
+   - **Para trocar ou recuperar a senha:** a própria pessoa toca em **Esqueci minha senha** na tela de entrada e recebe um link por e-mail para criar uma senha nova.
 4. Para tirar o acesso de alguém: **Ajustes → Pessoas com acesso → Remover acesso**.
 
 > Dica: no **iPhone**, o login com Google às vezes não abre quando o app está na tela inicial. Nesse caso use **e-mail e senha**, ou entre pelo Safari e depois adicione à tela inicial.

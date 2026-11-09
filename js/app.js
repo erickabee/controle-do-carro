@@ -1622,8 +1622,8 @@
       '<p>Entre para ver os abastecimentos e as manutenções dos carros da família.</p><div id="erros"></div>' +
       '<div class="cartao"><button class="botao botao-principal botao-grande" type="button" id="entrar-google">' +
       '<span class="icone" aria-hidden="true">🔑</span> Entrar com Google</button>' +
-      '<p class="legenda-simples" style="margin:0">Use a conta Google (Gmail) que está no celular.</p></div>' +
-      '<div class="cartao"><h2>Ou entre com e-mail e senha</h2><form id="form-login" novalidate>' +
+      '<p class="legenda-simples" style="margin:0">Tem Gmail? Use a conta Google que já está no celular. Não precisa de senha nova.</p></div>' +
+      '<div class="cartao"><h2>Não tem Gmail?</h2><p>Entre com o e-mail e a senha que você recebeu de quem configurou o aplicativo.</p><form id="form-login" novalidate>' +
       '<div class="campo"><label for="email">E-mail</label><input type="email" id="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false"></div>' +
       '<div class="campo"><label for="senha">Senha</label><input type="password" id="senha" autocomplete="current-password">' +
       '<label class="dica" style="display:flex;gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="mostrar-senha" style="width:24px;height:24px"> Mostrar a senha</label></div>' +
@@ -1733,7 +1733,7 @@
     h += '<div class="cartao"><h2>Incluir uma pessoa</h2><form id="form-email" novalidate>' +
       '<div class="campo"><label for="novo-email">E-mail da pessoa</label><input type="email" id="novo-email" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="nome@gmail.com"></div>' +
       '<button class="botao botao-principal" type="submit">Incluir</button></form>' +
-      '<p class="legenda-simples">A pessoa entra com <strong>“Entrar com Google”</strong> usando esse e-mail, ou com <strong>e-mail e senha</strong> (a conta é criada no Console do Firebase — veja o README).</p></div>';
+      '<p class="legenda-simples">A pessoa entra com <strong>“Entrar com Google”</strong> usando esse e-mail, ou, se não tiver Gmail, com <strong>e-mail e senha</strong>. Nesse caso, a conta e a senha são criadas por você no Console do Firebase (Authentication → Usuários → Adicionar usuário).</p></div>';
     h += '<button class="botao botao-secundario" type="button" data-acao="voltar">Voltar</button>';
     tela.innerHTML = h;
 

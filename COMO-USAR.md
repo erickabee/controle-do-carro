@@ -9,9 +9,9 @@ Guia simples para quem vai anotar os abastecimentos e as manutenções.
 1. Abra o link que recebeu: **https://erickabee.github.io/controle-do-carro/**
    - Android: abra no **Chrome**.
    - iPhone: abra no **Safari**.
-2. Toque em um dos botões:
-   - **Entrar com Google**, se você usa Gmail no celular. Escolha a sua conta e pronto.
-   - Ou digite o **e-mail e a senha** que recebeu e toque em **Entrar**.
+2. Escolha como entrar:
+   - **Tem Gmail?** Toque em **Entrar com Google** e escolha a sua conta. Não precisa de senha nova: se o Google pedir, é a senha de sempre do Gmail.
+   - **Não tem Gmail?** Digite o **e-mail** e a **senha que você recebeu** de quem configurou o aplicativo e toque em **Entrar**. Você não precisa criar senha.
 3. Se aparecer **“Confirme seu e-mail”**:
    1. Toque em **Enviar link de confirmação**.
    2. Abra o seu e-mail (veja também a pasta **Spam**) e toque no link.
@@ -68,8 +68,8 @@ Sim. O que um anota aparece no outro em poucos segundos.
 **E se estiver sem internet?**
 Pode anotar normalmente. Aparece um aviso marrom “Sem internet”, e os registros são enviados sozinhos quando a internet voltar.
 
-**Esqueci a senha.**
-Na tela de entrada, digite seu e-mail e toque em **Esqueci minha senha**. Chega um e-mail com um link para criar uma senha nova.
+**Esqueci a senha, ou quero trocar a senha que recebi.**
+Na tela de entrada, digite seu e-mail e toque em **Esqueci minha senha**. Chega um e-mail com um link para criar a senha que você quiser. (Quem entra com Google não tem senha do aplicativo: usa a do Gmail.)
 
 **Apareceu “Quase lá” ou “Sem acesso”.**
 Seu e-mail ainda não foi liberado. Peça para quem configurou o aplicativo incluir seu e-mail em **Ajustes → Pessoas com acesso**. Depois toque em **Tentar de novo**.
