@@ -62,7 +62,7 @@
     await auth.currentUser.getIdToken(true); // atualiza o "e-mail verificado" para as regras
     return auth.currentUser;
   }
-  function sair() { pararDeOuvir(); familiaId = null; return fb.signOut(auth); }
+  function sair() { pararDeOuvir(); pararPerfil(); familiaId = null; return fb.signOut(auth); }
 
   // ---------- Família ----------
   async function buscarFamilia(email) {
@@ -129,6 +129,25 @@
     }
     return Promise.all(promessas);
   }
+  // ---------- Preferências da pessoa (perfis/{uid}) ----------
+  // Separadas dos dados da família; as regras só deixam cada um ler e gravar o próprio.
+  // O cache do Firestore guarda a última versão: sem internet, ela continua valendo,
+  // e uma mudança feita sem internet é enviada quando a conexão voltar.
+  var cancelarPerfil = null;
+  function ouvirPerfil(uid, cb) {
+    pararPerfil();
+    cancelarPerfil = fb.onSnapshot(fb.doc(db, 'perfis', uid), function (s) {
+      cb(s.exists() ? s.data() : null);
+    }, function () { /* sem acesso ao perfil: o app segue com a preferência do aparelho */ });
+  }
+  function pararPerfil() {
+    if (cancelarPerfil) { try { cancelarPerfil(); } catch (e) { /* ok */ } }
+    cancelarPerfil = null;
+  }
+  function gravarPerfil(uid, dados) {
+    return fb.setDoc(fb.doc(db, 'perfis', uid), { tema: dados.tema, texto: dados.texto, atualizadoEm: Date.now() });
+  }
+
   function novoId(colecao) { return fb.doc(fb.collection(db, 'familias', familiaId || '_', colecao)).id; }
 
   root.Nuvem = {
@@ -136,6 +155,6 @@
     aoMudarUsuario: aoMudarUsuario, usuario: usuario, entrarGoogle: entrarGoogle, entrarEmail: entrarEmail,
     esqueciSenha: esqueciSenha, enviarVerificacao: enviarVerificacao, recarregarUsuario: recarregarUsuario, sair: sair,
     buscarFamilia: buscarFamilia, criarFamilia: criarFamilia, atualizarEmails: atualizarEmails,
-    ouvir: ouvir, pararDeOuvir: pararDeOuvir, gravar: gravar, apagar: apagar, emLotes: emLotes, novoId: novoId
+    ouvir: ouvir, pararDeOuvir: pararDeOuvir, ouvirPerfil: ouvirPerfil, pararPerfil: pararPerfil, gravarPerfil: gravarPerfil, gravar: gravar, apagar: apagar, emLotes: emLotes, novoId: novoId
   };
 })(this);

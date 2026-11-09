@@ -241,8 +241,8 @@ await teste('cartões da Garagem mostram nome, marca/modelo, quilometragem e pr�
   await p.waitForTimeout(800);
   await ir(p, '#inicio');
   const cartao = (await p.textContent(`.garagem .escolha-carro:has(.nome:text-is("Carro 5"))`)).replace(/\s+/g, ' ');
-  assert.match(cartao, /Marca W Modelo K 2019/);
-  assert.match(cartao, /Quilometragem: 33\.000 km/);
+  assert.match(cartao, /Marca W Modelo K · 2019/);
+  assert.match(cartao, /Quilometragem\s*33\.000 km/);
   assert.match(cartao, /Faltam 1\.000 km para a troca de óleo/);
   // limpa para não afetar os próximos testes
   for (const doc of ['abastecimentos/g1', 'manutencoes/g2']) await fetch(`${FS}/familias/${fid}/${doc}`, { method: 'DELETE', headers: DONO });
@@ -394,7 +394,7 @@ await teste('corrigir uma manutenção mantém o ID e refaz o lembrete e a próx
 await teste('editar nome, marca, modelo, ano, cor e óleo do carro mantém o ID e os registros', async () => {
   const totalAntes = (await listar(`familias/${fid}/veiculos`)).length;
   await ir(p, '#ajustes');
-  await p.click('a:has-text("Dados do Carro Teste")');
+  await p.click('.lista-ajustes a:has-text("Carro Teste")');
   await p.waitForSelector('#form-carro');
   assert.equal(await p.inputValue('#nome'), 'Carro Teste');
   await p.fill('#nome', 'Carro Renomeado'); await p.fill('#marca', 'Marca Z'); await p.fill('#modelo', 'Modelo Q'); await p.fill('#ano', '2020');
@@ -510,6 +510,173 @@ await teste('demonstração continua com os 2 carros fictícios e não grava na 
   assert.deepEqual(nomes.sort(), ['Carro 1 (exemplo)', 'Carro 2 (exemplo)']);
   assert.equal((await listar('familias')).length, antes);
 });
+
+// ---------- Entrada, Garagem, formulários e aparência ----------
+const UID_AP = await criarUsuario('aparencia@example.com', 'senha-teste-3');
+await gravarDoc('familias/AP', { nome: 'Família AP', emails: ['aparencia@example.com'], criadoPor: UID_AP, criadoPorEmail: 'aparencia@example.com', criadoEm: 1 });
+await gravarDoc('familias/AP/veiculos/vw', { nome: 'Carro do Pai', marca: 'volkswagen', modelo: 'Gol', ano: '2016', cor: '#1e40af', oleoKm: 5000, oleoMeses: null, criadoEm: 1, arquivado: false, arquivadoEm: null });
+await gravarDoc('familias/AP/veiculos/mw', { nome: 'Carro da Mãe', marca: 'Marca W', modelo: '', ano: '', cor: '#b91c1c', oleoKm: 5000, oleoMeses: null, criadoEm: 2, arquivado: false, arquivadoEm: null });
+await gravarDoc('familias/AP/veiculos/sd', { nome: 'Sem dados', marca: '', modelo: '', ano: '', cor: '#15803d', oleoKm: 5000, oleoMeses: null, criadoEm: 3, arquivado: false, arquivadoEm: null });
+await gravarDoc('familias/AP/abastecimentos/ap1', { carroId: 'vw', data: '2026-10-01', km: 12000, litros: 30, valor: 180, tanqueCheio: true });
+const perfisNaNuvem = async () => (await listar('perfis'));
+const ap = await novaPagina();
+
+await teste('entrada: e-mail, senha e "Entrar" primeiro; depois "ou" e Google; demonstração separada abaixo', async () => {
+  await ap.goto(SITE); await ap.waitForSelector('#form-login');
+  const ordem = await ap.evaluate(() => ['#email', '#senha', '#esqueci', '#botao-entrar', '.separador-ou', '#entrar-google', '[data-acao=demo]']
+    .map(s => document.querySelector(s)).map((el, i, todos) => i === 0 || (todos[i - 1].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) > 0));
+  assert.ok(ordem.every(Boolean), 'ordem na tela: ' + JSON.stringify(ordem));
+  assert.equal(await ap.textContent('.separador-ou'), 'ou');
+  assert.ok(await ap.evaluate(() => document.querySelector('#esqueci').closest('.campo').contains(document.querySelector('#senha'))), '"Esqueci minha senha" fica junto do campo de senha');
+  assert.ok(await ap.evaluate(() => !document.querySelector('.entrada-cartao').contains(document.querySelector('[data-acao=demo]'))), 'demonstração fora do cartão de login');
+  await ap.click('#mostrar-senha');
+  assert.equal(await ap.getAttribute('#senha', 'type'), 'text');
+  await ap.click('#mostrar-senha');
+  assert.equal(await ap.getAttribute('#senha', 'type'), 'password');
+  // celular: tudo da entrada cabe na tela, sem rolar
+  const fim = await ap.evaluate(() => document.querySelector('[data-acao=demo]').getBoundingClientRect().bottom);
+  assert.ok(fim <= 844, 'botão de demonstração visível sem rolar (fim em ' + Math.round(fim) + ')');
+});
+
+await teste('Garagem mostra nome, marca, modelo e ano, com emblema da marca ou genérico', async () => {
+  await entrar(ap, 'aparencia@example.com', 'senha-teste-3');
+  await ap.waitForSelector('.garagem .escolha-carro');
+  const cartao = (n) => ap.locator(`.escolha-carro:has(.nome:text-is("${n}"))`);
+  assert.equal((await cartao('Carro do Pai').locator('.descricao').textContent()), 'volkswagen Gol · 2016');
+  assert.equal(await cartao('Carro do Pai').locator('.emblema').getAttribute('data-marca'), 'Volkswagen');
+  assert.equal((await cartao('Carro do Pai').locator('.emblema').textContent()), 'VW');
+  assert.equal((await cartao('Carro da Mãe').locator('.descricao').textContent()), 'Marca W', 'só a marca, sem separadores sobrando');
+  assert.equal(await cartao('Carro da Mãe').locator('.emblema-generico').count(), 1, 'marca desconhecida: emblema genérico');
+  assert.equal(await cartao('Sem dados').locator('.descricao').count(), 0, 'sem marca/modelo/ano: nenhuma linha vazia');
+  const textos = (await ap.locator('.garagem').textContent());
+  assert.doesNotMatch(textos, /undefined|null|Marca X|Modelo A/);
+  assert.equal(await ap.locator('img[src^="http"]').count(), 0, 'nenhuma imagem buscada fora do app');
+});
+
+await teste('formulário sem mudanças: "← Voltar" volta ao painel sem perguntar', async () => {
+  await ap.click('.escolha-carro:has(.nome:text-is("Carro do Pai"))');
+  await ap.waitForSelector('.topo-voltar');
+  await ap.click('a:has-text("Registrar abastecimento")');
+  await ap.waitForSelector('#form-abast');
+  assert.ok(await ap.isVisible('#topo .botao-voltar'), '"← Voltar" no topo');
+  assert.ok(await ap.isVisible('#form-abast [data-acao=voltar-form]:has-text("Cancelar")'), '"Cancelar" no fim');
+  await ap.click('#topo .botao-voltar');
+  await ap.waitForSelector('.topo-voltar');
+  assert.equal(await ap.evaluate(() => location.hash), '#painel/vw');
+  assert.equal(await ap.isVisible('.janela'), false);
+});
+
+await teste('formulário com mudanças: pergunta antes de descartar e respeita a resposta', async () => {
+  await ap.click('a:has-text("Registrar manutenção")');
+  await ap.waitForSelector('#form-manut');
+  await ap.fill('#km', '12500');
+  await ap.click('#form-manut [data-acao=voltar-form]');                     // Cancelar
+  assert.match(await ap.textContent('.janela h2'), /Descartar/);
+  await ap.click('[data-janela=nao]');                                          // continuar preenchendo
+  assert.equal(await ap.inputValue('#km'), '12500', 'o que foi digitado continua lá');
+  assert.match(await ap.evaluate(() => location.hash), /^#manutencao/);
+  await ap.click('#topo .botao-voltar');
+  await ap.click('[data-janela=sim]');                                          // descartar
+  await ap.waitForSelector('.topo-voltar');
+  assert.equal(await ap.evaluate(() => location.hash), '#painel/vw');
+  assert.equal((await listar('familias/AP/manutencoes')).length, 0, 'nada foi salvo');
+});
+
+await teste('corrigir pelo Histórico: Voltar e Cancelar retornam ao Histórico', async () => {
+  for (const botao of ['#topo .botao-voltar', '#form-abast [data-acao=voltar-form]']) {
+    await ir(ap, '#historico'); await ap.click('[data-aba=abastecimentos]'); await ap.click('[data-periodo=tudo]');
+    await ap.click('.registro a:has-text("Corrigir")');
+    await ap.waitForSelector('#form-abast');
+    await ap.click(botao);
+    await ap.waitForSelector('.abas');
+    assert.equal(await ap.evaluate(() => location.hash), '#historico', botao);
+  }
+});
+
+await teste('dados do carro: Voltar retorna a Ajustes; salvar continua funcionando', async () => {
+  await ir(ap, '#ajustes');
+  await ap.click('.lista-ajustes a:has-text("Sem dados")');
+  await ap.waitForSelector('#form-carro');
+  assert.match(await ap.textContent('#topo'), /Sem dados/);
+  await ap.click('#topo .botao-voltar');
+  await ap.waitForSelector('#aparencia');
+  assert.equal(await ap.evaluate(() => location.hash), '#ajustes');
+  await ap.click('.lista-ajustes a:has-text("Sem dados")');
+  await ap.fill('#ano', '2010');
+  await ap.click('#form-carro button[type=submit]'); await okJanela(ap);
+  await esperarNuvem(async () => (await listar('familias/AP/veiculos')).find(c => c.id === 'sd').ano === '2010', 'ano salvo');
+});
+
+await teste('formulário aberto direto pelo endereço: Voltar leva ao painel do carro', async () => {
+  await ap.goto(SITE + '?direto=1#manutencao'); await ap.waitForSelector('#form-manut');
+  await ap.click('#topo .botao-voltar');
+  await ap.waitForSelector('.topo-voltar');
+  assert.match(await ap.evaluate(() => location.hash), /^#painel\//);
+});
+
+await teste('Aparência: tema e tamanho do texto mudam na hora e vão para o perfil da pessoa', async () => {
+  await ir(ap, '#ajustes');
+  assert.equal(await ap.getAttribute('html', 'data-tema'), 'claro', 'padrão: claro');
+  assert.equal(await ap.getAttribute('html', 'data-texto'), 'padrao');
+  const tamanho = await ap.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
+  await ap.click('.opcao:has(input[name=tema][value=escuro])');
+  await ap.click('.opcao:has(input[name=texto][value=enorme])');
+  assert.equal(await ap.getAttribute('html', 'data-tema'), 'escuro');
+  assert.equal(await ap.getAttribute('html', 'data-texto'), 'enorme');
+  assert.ok(await ap.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize)) > tamanho * 1.2, 'o texto ficou maior');
+  assert.equal(await ap.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(12, 20, 19)', 'fundo escuro');
+  await esperarNuvem(async () => { const p = (await perfisNaNuvem()).find(x => x.id === UID_AP); return p && p.tema === 'escuro' && p.texto === 'enorme'; }, 'perfil gravado');
+  const perfil = (await perfisNaNuvem()).find(x => x.id === UID_AP);
+  assert.deepEqual(Object.keys(perfil).filter(k => !['id', 'atualizado'].includes(k)).sort(), ['atualizadoEm', 'tema', 'texto'], 'só as preferências, nada dos carros');
+  const familia = (await listar('familias')).find(f => f.id === 'AP');
+  assert.equal(familia.tema, undefined, 'a família não recebe as preferências');
+});
+
+await teste('Aparência acompanha a conta em outro celular', async () => {
+  const outro = await novaPagina();              // aparelho novo: nada guardado
+  await entrar(outro, 'aparencia@example.com', 'senha-teste-3');
+  await outro.waitForSelector('.garagem');
+  await outro.waitForFunction(() => document.documentElement.getAttribute('data-tema') === 'escuro', null, { timeout: 10000 });
+  assert.equal(await outro.getAttribute('html', 'data-texto'), 'enorme');
+  await ir(outro, '#ajustes');
+  assert.ok(await outro.isChecked('input[name=tema][value=escuro]'));
+  assert.ok(await outro.isChecked('input[name=texto][value=enorme]'));
+  assert.deepEqual(outro.errosJs, []);
+  await outro.context().close();
+});
+
+await teste('Aparência sem internet: vale na hora e sincroniza quando a conexão volta', async () => {
+  await ir(ap, '#ajustes');
+  await ap.context().setOffline(true);
+  await ap.click('.opcao:has(input[name=tema][value=auto])');
+  await ap.click('.opcao:has(input[name=texto][value=maior])');
+  assert.equal(await ap.getAttribute('html', 'data-tema'), 'auto');
+  assert.deepEqual(await ap.evaluate(() => JSON.parse(localStorage.getItem('controleCarro.aparencia'))), { tema: 'auto', texto: 'maior' });
+  await ap.waitForTimeout(800);
+  const naNuvem = (await perfisNaNuvem()).find(x => x.id === UID_AP);
+  assert.equal(naNuvem.tema, 'escuro', 'sem internet ainda não chegou na nuvem');
+  await ap.context().setOffline(false);
+  await esperarNuvem(async () => { const p = (await perfisNaNuvem()).find(x => x.id === UID_AP); return p && p.tema === 'auto' && p.texto === 'maior'; }, 'sincronizou ao voltar a internet');
+});
+
+await teste('demonstração: aparência fica só no aparelho e nunca vai para a nuvem', async () => {
+  const antes = JSON.stringify(await perfisNaNuvem());
+  const q = await novaPagina();
+  await q.goto(SITE); await q.waitForSelector('#form-login');
+  await q.click('[data-acao=demo]'); await q.waitForSelector('.garagem');
+  await ir(q, '#ajustes');
+  assert.match(await q.textContent('#aparencia'), /só neste aparelho/);
+  await q.click('.opcao:has(input[name=tema][value=escuro])');
+  await q.click('.opcao:has(input[name=texto][value=maior])');
+  assert.equal(await q.getAttribute('html', 'data-tema'), 'escuro');
+  assert.deepEqual(await q.evaluate(() => JSON.parse(localStorage.getItem('controleCarro.aparencia'))), { tema: 'escuro', texto: 'maior' });
+  await q.waitForTimeout(1000);
+  assert.equal(JSON.stringify(await perfisNaNuvem()), antes, 'nenhum perfil criado ou alterado');
+  assert.deepEqual(q.errosJs, []);
+  await q.context().close();
+});
+
+await teste('nenhum erro de JavaScript nas telas novas', async () => assert.deepEqual(ap.errosJs, []));
 
 await teste('nenhum erro de JavaScript durante os testes', async () => assert.deepEqual(p.errosJs, []));
 

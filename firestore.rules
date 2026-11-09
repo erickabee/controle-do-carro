@@ -128,6 +128,22 @@ service cloud.firestore {
       }
     }
 
+    // ---------- Preferências de cada pessoa (tema e tamanho do texto) ----------
+    // Ficam separadas dos dados dos carros: cada pessoa só lê e grava o PRÓPRIO
+    // perfil (identificado pelo uid do login). Não dá acesso a nenhuma família.
+    function perfilValido(d) {
+      return d.keys().hasAll(['tema', 'texto'])
+        && d.keys().hasOnly(['tema', 'texto', 'atualizadoEm'])
+        && d.tema in ['claro', 'escuro', 'auto']
+        && d.texto in ['padrao', 'maior', 'enorme']
+        && nuloOuNumero(d.get('atualizadoEm', null));
+    }
+    match /perfis/{uid} {
+      allow get, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && perfilValido(request.resource.data);
+    }
+
     // ---------- Todo o resto: negado ----------
     match /{qualquerCoisa=**} {
       allow read, write: if false;

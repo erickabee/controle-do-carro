@@ -19,12 +19,13 @@ Com um ou mais carros em casa, é difícil lembrar de cabeça quanto se abastece
 
 - **Anotar abastecimentos** com a quilometragem do painel, os litros e o valor da nota. O app calcula o preço por litro, quanto o carro andou, o consumo em km por litro, o custo por km e quanto o litro subiu ou baixou.
 - **Registrar manutenções** e receber avisos. A troca de óleo é lembrada a cada 5.000 km (o intervalo pode ser mudado). Pneus e outros serviços avisam por km ou por data, quando a pessoa quiser. Os avisos são frases simples, como “Faltam 500 km para a troca de óleo”.
-- **Começar pela Garagem**, com um cartão para cada carro (quilometragem e próximo aviso); tocando no carro, abre o painel dele.
+- **Começar pela Garagem**, com um cartão para cada carro (nome, marca, modelo, ano, quilometragem e próximo aviso); tocando no carro, abre o painel dele.
 - **Ver o painel** de cada carro com a quilometragem atual, o consumo recente, o gasto do mês, o último abastecimento e a próxima manutenção.
 - **Consultar o histórico** por período, e corrigir ou apagar registros, sempre com confirmação.
 - **Ver relatórios** de gasto com combustível por mês e de consumo ao longo do tempo.
 - **Acompanhar um ou mais carros, separados:** cada um tem seus próprios registros, cálculos, lembretes e uma cor própria na tela. A família começa sem nenhum carro, cadastra o primeiro e adiciona outros quando precisar.
 - **Arquivar um carro** que não é mais usado: ele sai da lista, mas todos os registros continuam guardados e podem ser consultados em modo somente leitura ou reativados.
+- **Ajustar a aparência:** texto em três tamanhos e tema claro, escuro ou automático. A escolha acompanha a conta da pessoa em qualquer celular.
 - **Guardar uma cópia** dos dados em arquivo e exportar uma planilha para Excel ou Google Planilhas.
 
 ## Em vários celulares
@@ -42,6 +43,10 @@ Cada pessoa entra com a conta Google ou com e-mail e senha. Só entram os e-mail
 **Cada registro sabe de qual carro é.** Todo abastecimento e manutenção guarda o carro a que pertence, e cálculos, histórico, relatórios e lembretes são sempre filtrados por ele. Nas telas de anotar, o nome e a cor do carro ficam em destaque para evitar registrar no carro errado.
 
 **Acesso negado por padrão.** As regras do Firestore ([`firestore.rules`](firestore.rules)) só liberam quem fez login, confirmou o e-mail e está na lista de e-mails da família, e conferem o formato dos dados gravados. Elas têm testes automáticos no emulador.
+
+**Visual de painel de bordo, sem logotipos de terceiros.** Odômetro, quadro de instrumentos e luzes de aviso inspiram a identidade. A marca de cada carro aparece num selo próprio, com a sigla (VW, FIAT…), em vez de logotipos registrados. Ícones e ilustração foram desenhados para o app e tudo funciona sem internet.
+
+**Preferências separadas dos dados.** Tema e tamanho do texto ficam num perfil de cada pessoa, que só ela lê e grava. Esse perfil não dá acesso a nenhuma família.
 
 **Configuração fora do Git.** O repositório tem só código e documentação. A configuração do Firebase fica num arquivo ignorado pelo Git ou num segredo do GitHub, e nenhuma credencial administrativa é usada.
 

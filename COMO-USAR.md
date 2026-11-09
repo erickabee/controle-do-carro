@@ -10,8 +10,8 @@ Guia simples para quem vai anotar os abastecimentos e as manutenções.
    - Android: abra no **Chrome**.
    - iPhone: abra no **Safari**.
 2. Escolha como entrar:
-   - **Tem Gmail?** Toque em **Entrar com Google** e escolha a sua conta. Não precisa de senha nova: se o Google pedir, é a senha de sempre do Gmail.
-   - **Não tem Gmail?** Digite o **e-mail** e a **senha que você recebeu** de quem configurou o aplicativo e toque em **Entrar**. Você não precisa criar senha.
+   - **Recebeu um e-mail e uma senha?** Digite os dois nos primeiros campos e toque em **Entrar**. Você não precisa criar senha. Para conferir o que digitou, toque em **Mostrar**, dentro do campo da senha.
+   - **Tem Gmail?** Toque em **Entrar com Google**, logo abaixo do “ou”, e escolha a sua conta. Não precisa de senha nova: se o Google pedir, é a senha de sempre do Gmail.
 3. Se aparecer **“Confirme seu e-mail”**:
    1. Toque em **Enviar link de confirmação**.
    2. Abra o seu e-mail (veja também a pasta **Spam**) e toque no link.
@@ -28,7 +28,7 @@ Assim ele abre com um toque, como os outros aplicativos.
 
 ## 3. Garagem: escolher o carro
 
-Ao abrir, aparece a **Garagem** com todos os carros da família. Cada cartão mostra a quilometragem e o próximo aviso de manutenção. **Toque no carro** para abrir o painel dele. Com muitos carros, dá para procurar pelo nome.
+Ao abrir, aparece a **Garagem** com todos os carros da família. Cada cartão mostra o nome, a marca, o modelo e o ano (quando foram cadastrados), a quilometragem e o próximo aviso de manutenção. Ao lado do nome aparece um selo com a sigla da marca (por exemplo, **VW** ou **FIAT**); se a marca não for reconhecida, aparece o desenho de um carro. **Toque no carro** para abrir o painel dele. Com muitos carros, dá para procurar pelo nome.
 
 👉 **Dentro do carro, o nome dele aparece no alto da tela, com um ponto colorido.** Confira sempre antes de salvar. Para ir direto a outro carro, toque em **Trocar carro** e escolha na lista. Para voltar à lista completa, toque em **← Garagem** (ou no botão **Garagem** do menu).
 
@@ -48,6 +48,8 @@ Para cadastrar outro carro, toque em **+ Adicionar carro**, no fim da Garagem.
 
 O aplicativo mostra quanto o carro andou, o consumo e o preço do litro.
 
+**Desistiu?** Toque em **← Voltar** (no alto) ou em **Cancelar** (no fim). Você volta para a tela de onde veio. Se já tinha preenchido algo, o aplicativo pergunta antes de descartar.
+
 ## 5. Anotar uma manutenção (óleo, pneus, revisão…)
 
 1. Toque em **🔧 Registrar manutenção**.
@@ -65,6 +67,9 @@ No painel de cada carro e nos cartões da Garagem aparecem avisos:
 Toque em **📋 Histórico**, encontre o registro e toque em **✏️ Corrigir** ou **🗑️ Apagar**. O aplicativo sempre pergunta antes de apagar.
 
 ## Perguntas comuns
+
+**As letras estão pequenas, ou a tela está clara demais à noite.**
+Em **Ajustes → Aparência**, escolha o **tamanho do texto** (Padrão, Maior ou Ainda maior) e o **tema** (Claro, Escuro ou Automático, que segue o celular). Muda na hora. A escolha fica guardada na sua conta: se você entrar em outro celular, ele já abre do mesmo jeito.
 
 **Os dois celulares veem a mesma coisa?**
 Sim. O que um anota aparece no outro em poucos segundos.

@@ -136,6 +136,40 @@ await teste('lote com 200 registros (restauração de cópia) é aceito', async 
   await assertSucceeds(lote.commit());
 });
 
+// ---------- Preferências de cada pessoa (perfis/{uid}) ----------
+const perfil = { tema: 'escuro', texto: 'maior', atualizadoEm: 1 };
+await teste('perfil: a pessoa grava o próprio perfil', () => assertSucceeds(mae().doc('perfis/u-mae').set(perfil)));
+await teste('perfil: a pessoa lê o próprio perfil', () => assertSucceeds(mae().doc('perfis/u-mae').get()));
+await teste('perfil: a pessoa muda o próprio perfil', () => assertSucceeds(mae().doc('perfis/u-mae').set({ ...perfil, tema: 'auto', texto: 'enorme' })));
+await teste('perfil: atualizadoEm é opcional', () => assertSucceeds(pai().doc('perfis/u-pai').set({ tema: 'claro', texto: 'padrao' })));
+await teste('perfil: e-mail ainda não verificado também guarda as próprias preferências', () =>
+  assertSucceeds(usuario('u-nv2', 'nv2@example.com', false).doc('perfis/u-nv2').set(perfil)));
+await teste('perfil: sem login não lê', () => assertFails(anonimo().doc('perfis/u-mae').get()));
+await teste('perfil: sem login não grava', () => assertFails(anonimo().doc('perfis/u-mae').set(perfil)));
+await teste('perfil: alguém da MESMA família não lê o perfil de outra pessoa', () => assertFails(pai().doc('perfis/u-mae').get()));
+await teste('perfil: alguém da MESMA família não grava o perfil de outra pessoa', () => assertFails(filho().doc('perfis/u-mae').set(perfil)));
+await teste('perfil: estranho não lê nem grava o perfil de outra pessoa', async () => {
+  await assertFails(estranho().doc('perfis/u-mae').get());
+  await assertFails(estranho().doc('perfis/u-mae').set(perfil));
+  await assertFails(estranho().doc('perfis/u-mae').delete());
+});
+await teste('perfil: listar perfis é negado (nem o próprio, por busca)', () => assertFails(mae().collection('perfis').get()));
+await teste('perfil: tema fora da lista é recusado', () => assertFails(mae().doc('perfis/u-mae').set({ ...perfil, tema: 'roxo' })));
+await teste('perfil: tamanho de texto fora da lista é recusado', () => assertFails(mae().doc('perfis/u-mae').set({ ...perfil, texto: '300%' })));
+await teste('perfil: tipo errado é recusado', () => assertFails(mae().doc('perfis/u-mae').set({ ...perfil, tema: 1 })));
+await teste('perfil: faltando campo é recusado', () => assertFails(mae().doc('perfis/u-mae').set({ tema: 'claro' })));
+await teste('perfil: campo extra é recusado (não vira depósito de dados)', () =>
+  assertFails(mae().doc('perfis/u-mae').set({ ...perfil, familia: 'A' })));
+await teste('perfil: atualizadoEm precisa ser número', () => assertFails(mae().doc('perfis/u-mae').set({ ...perfil, atualizadoEm: 'ontem' })));
+await teste('perfil: ter perfil não dá acesso a nenhuma família', async () => {
+  await assertSucceeds(usuario('u-x', 'estranho@example.com').doc('perfis/u-x').set(perfil));
+  await assertFails(estranho().doc('familias/A').get());
+  await assertFails(estranho().collection('familias/A/abastecimentos').get());
+});
+await teste('perfil: a pessoa apaga o próprio perfil', () => assertSucceeds(mae().doc('perfis/u-mae').delete()));
+await teste('perfil: nada além de perfis/{uid} (subcoleções negadas)', () =>
+  assertFails(mae().doc('perfis/u-mae/extra/x').set({ a: 1 })));
+
 await teste('quem criou apaga a família', () => assertSucceeds(filho().doc('familias/A').delete()));
 await teste('depois de apagada a família, ninguém lê os registros', () => assertFails(filho().doc('familias/A/abastecimentos/a1').get()));
 

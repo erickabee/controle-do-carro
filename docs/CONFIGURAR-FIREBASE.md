@@ -39,6 +39,8 @@ Leva uns 20 minutos. Tudo é gratuito no plano **Spark**, que é mais do que suf
 ## 8. Publicar as regras de segurança
 **Firestore Database → Regras**: apague o conteúdo, cole o arquivo [`firestore.rules`](../firestore.rules) inteiro e clique em **Publicar**.
 
+As regras protegem os dados da família (`familias/...`) e o perfil de cada pessoa (`perfis/{uid}`, só com o tema e o tamanho do texto). Sempre que o arquivo mudar, publique de novo: sem a parte de `perfis`, o app continua funcionando, mas a aparência fica só no aparelho e não acompanha a conta.
+
 Se preferir a linha de comando:
 
 ```bash

@@ -22,6 +22,49 @@
   };
   function tom(cor) { var c = String(cor || '').toLowerCase(); return TONS[c] || (/^#[0-9a-f]{6}$/.test(c) ? c : TONS['#1e40af']); }
   function marca(tipo) { return '<div class="marca marca-' + tipo + '" aria-hidden="true"></div>'; }
+
+  // Ícones próprios do app (traço único, cantos arredondados), desenhados para o Controle do Carro.
+  function svg(corpo, extra) {
+    return '<svg class="icone' + (extra ? ' ' + extra : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + corpo + '</svg>';
+  }
+  var ICONES = {
+    bomba: svg('<path d="M5 20.5V5.5A1.5 1.5 0 0 1 6.5 4h7A1.5 1.5 0 0 1 15 5.5v15M3.5 20.5h13"/><path d="M7.5 7.5h5v3.5h-5z"/><path d="M15 9.5h1.6a1.4 1.4 0 0 1 1.4 1.4v5.1a1.5 1.5 0 0 0 3 0V8.6L18.5 6"/>'),
+    chave: svg('<path d="M14.6 6.2a4 4 0 0 0-5.3 5.2l-5.1 5.1a1.6 1.6 0 0 0 2.3 2.3l5.1-5.1a4 4 0 0 0 5.2-5.3l-2.4 2.4-2.1-.5-.5-2.1z"/>'),
+    carro: svg('<path d="M4.5 15.5v-3l1.7-4.3A2 2 0 0 1 8 7h8a2 2 0 0 1 1.8 1.2l1.7 4.3v3"/><path d="M3.5 15.5h17v2.5a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-1-1v-1h-10v1a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1z"/><path d="M5 12.5h14"/><circle cx="7.5" cy="14.5" r=".6"/><circle cx="16.5" cy="14.5" r=".6"/>'),
+    seta: svg('<path d="m9.5 6 6 6-6 6"/>', 'icone-seta'),
+    voltar: svg('<path d="M14.5 6l-6 6 6 6"/>'),
+    sol: svg('<circle cx="12" cy="12" r="4"/><path d="M12 3v1.8M12 19.2V21M3 12h1.8M19.2 12H21M5.6 5.6l1.3 1.3M17.1 17.1l1.3 1.3M5.6 18.4l1.3-1.3M17.1 6.9l1.3-1.3"/>'),
+    lua: svg('<path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z"/>'),
+    auto: svg('<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M12 7.5a3.5 3.5 0 0 0 0 7z" fill="currentColor"/><circle cx="12" cy="11" r="3.5"/>'),
+    pessoas: svg('<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.8a3 3 0 0 1 0 5.4M17.5 14.2A5.5 5.5 0 0 1 20.5 19"/>'),
+    sair: svg('<path d="M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H14"/><path d="M10 8l-4 4 4 4M6 12h9"/>'),
+    nuvem: svg('<path d="M7 18.5h10a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7 10a4.25 4.25 0 0 0 0 8.5z"/><path d="M12 15.5v-5M9.8 12.7 12 10.5l2.2 2.2"/>'),
+    ajuda: svg('<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.4"/><circle cx="12" cy="16.8" r=".5" fill="currentColor"/>'),
+    olho: svg('<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>'),
+    mais: svg('<path d="M12 5v14M5 12h14"/>'),
+    alerta: svg('<path d="M12 4.5 2.8 19.5h18.4z"/><path d="M12 10v4.2"/><circle cx="12" cy="16.9" r=".5" fill="currentColor"/>')
+  };
+  var G_GOOGLE = '<svg class="icone icone-google" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    '<path fill="#4285F4" d="M23.5 12.27c0-.82-.07-1.6-.2-2.36H12v4.47h6.46a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.27-2.09 3.56-5.17 3.56-8.73z"/>' +
+    '<path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.88-3c-1.07.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.95H1.28v3.1A12 12 0 0 0 12 24z"/>' +
+    '<path fill="#FBBC05" d="M5.29 14.29a7.2 7.2 0 0 1 0-4.58V6.61H1.28a12 12 0 0 0 0 10.78z"/>' +
+    '<path fill="#EA4335" d="M12 4.76c1.76 0 3.34.61 4.59 1.8l3.44-3.44A11.97 11.97 0 0 0 1.28 6.61l4.01 3.1C6.23 6.87 8.88 4.76 12 4.76z"/></svg>';
+
+  // Emblema do carro: sigla da marca reconhecida (desenho próprio, sem logotipo oficial)
+  // ou um carro genérico. A marca escrita aparece também no texto, ao lado.
+  function emblema(c) {
+    var m = window.Marcas ? Marcas.reconhecerMarca(c.marca) : null;
+    if (!m) return '<span class="emblema emblema-generico" style="--tom:' + tom(c.cor) + '" aria-hidden="true">' + ICONES.carro + '</span>';
+    return '<span class="emblema" style="--tom:' + tom(c.cor) + '" data-marca="' + esc(m.nome) + '" aria-hidden="true">' +
+      '<span class="sigla' + (m.sigla.length > 4 ? ' sigla-longa' : '') + (m.sigla.length > 6 ? ' sigla-muito-longa' : '') + '">' + esc(m.sigla) + '</span></span>';
+  }
+  // Quilometragem com cara de odômetro: cada algarismo numa casinha.
+  function odometro(km) {
+    var t = C.fmtNum(km);
+    return '<span class="odometro">' + t.split('').map(function (ch) {
+      return /\d/.test(ch) ? '<span class="dig">' + ch + '</span>' : '<span class="sep">' + ch + '</span>';
+    }).join('') + '<span class="un"> km</span></span>';
+  }
   var COMBUSTIVEIS = ['Gasolina', 'Etanol', 'Diesel', 'GNV'];
   var TIPOS_ORDEM = ['oleo', 'pneus', 'revisao', 'freios', 'bateria', 'alinhamento', 'outro'];
 
@@ -71,6 +114,64 @@
   function salvarPrefs() {
     try { localStorage.setItem(CHAVE_PREF, JSON.stringify(prefs)); } catch (e) { /* sem problema */ }
   }
+
+  // ---------------------------------------------------------------------
+  // Aparência (tema e tamanho do texto)
+  //  - fica guardada no aparelho (vale na hora, mesmo sem internet);
+  //  - com login, também no perfil da pessoa na nuvem (perfis/{uid}), para valer
+  //    em qualquer celular onde ela entrar. Na demonstração, só no aparelho.
+  // ---------------------------------------------------------------------
+  var CHAVE_APARENCIA = 'controleCarro.aparencia';
+  var TEMAS = ['claro', 'escuro', 'auto'];
+  var TEXTOS = ['padrao', 'maior', 'enorme'];
+  function aparenciaValida(a) {
+    return !!a && TEMAS.indexOf(a.tema) >= 0 && TEXTOS.indexOf(a.texto) >= 0;
+  }
+  function lerAparencia() {
+    var a = null;
+    try { a = JSON.parse(localStorage.getItem(CHAVE_APARENCIA)); } catch (e) { a = null; }
+    return { tema: a && TEMAS.indexOf(a.tema) >= 0 ? a.tema : 'claro', texto: a && TEXTOS.indexOf(a.texto) >= 0 ? a.texto : 'padrao' };
+  }
+  var aparencia = lerAparencia();
+  var escuroNoCelular = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  function temaEfetivo() {
+    return aparencia.tema === 'auto' ? (escuroNoCelular && escuroNoCelular.matches ? 'escuro' : 'claro') : aparencia.tema;
+  }
+  function aplicarAparencia() {
+    var h = document.documentElement;
+    h.setAttribute('data-tema', aparencia.tema);
+    h.setAttribute('data-texto', aparencia.texto);
+    var esquema = document.querySelector('meta[name=color-scheme]');
+    if (esquema) esquema.setAttribute('content', aparencia.tema === 'auto' ? 'light dark' : (aparencia.tema === 'escuro' ? 'dark' : 'light'));
+    var cor = document.querySelector('meta[name=theme-color]');
+    if (cor) cor.setAttribute('content', temaEfetivo() === 'escuro' ? '#0c1413' : '#f3f6f5');
+  }
+  if (escuroNoCelular && escuroNoCelular.addEventListener) escuroNoCelular.addEventListener('change', aplicarAparencia);
+  function guardarAparenciaNoAparelho() {
+    try { localStorage.setItem(CHAVE_APARENCIA, JSON.stringify(aparencia)); } catch (e) { /* sem problema */ }
+  }
+  // Mudança feita pela pessoa em Ajustes.
+  function mudarAparencia(campo, valor) {
+    if ((campo === 'tema' ? TEMAS : TEXTOS).indexOf(valor) < 0) return;
+    aparencia = Object.assign({}, aparencia);
+    aparencia[campo] = valor;
+    aplicarAparencia();
+    guardarAparenciaNoAparelho();
+    // Demonstração: nunca vai para a nuvem. Sem internet: o Firestore guarda e envia depois.
+    if (!estado.demo && modo === 'nuvem' && usuarioAtual) {
+      Nuvem.gravarPerfil(usuarioAtual.uid, aparencia).catch(function () { /* continua valendo no aparelho */ });
+    }
+  }
+  // Preferência vinda do perfil na nuvem (outro celular, ou o cache do próprio aparelho).
+  function aoReceberPerfil(d) {
+    if (modo === 'demo' || !aparenciaValida(d)) return;
+    if (d.tema === aparencia.tema && d.texto === aparencia.texto) return;
+    aparencia = { tema: d.tema, texto: d.texto };
+    aplicarAparencia();
+    guardarAparenciaNoAparelho();
+    if (modo === 'nuvem' && rotaAtual().nome === 'ajustes' && janela.hidden) redesenharSePossivel();
+  }
+  aplicarAparencia();
 
   function estadoVazio() {
     return { carros: [], abastecimentos: [], manutencoes: [], carroAtual: prefs.carroAtual || null,
@@ -194,7 +295,9 @@
     };
   }
   function descricaoCarro(c) {
-    return [c.marca, c.modelo, c.ano].filter(Boolean).join(' ');
+    var t = function (x) { return String(x === null || x === undefined ? '' : x).trim(); };
+    var mm = [t(c.marca), t(c.modelo)].filter(Boolean).join(' ');
+    return [mm, t(c.ano)].filter(Boolean).join(' · ');
   }
 
   // =====================================================================
@@ -208,9 +311,10 @@
   function $(sel, raiz) { return (raiz || document).querySelector(sel); }
   function $$(sel, raiz) { return Array.prototype.slice.call((raiz || document).querySelectorAll(sel)); }
   // Muda de tela. Se a rota já é a atual, redesenha direto (não haverá 'hashchange').
+  var navegacaoSubstituida = false;
   function ir(rota, substituir) {
     if (location.hash === '#' + rota) { desenhar(); return; }
-    if (substituir) location.replace('#' + rota);
+    if (substituir) { navegacaoSubstituida = true; location.replace('#' + rota); }
     else location.hash = '#' + rota;
   }
   function textoNumero(n, casas) { return (n === null || n === undefined) ? '' : C.fmtNum(n, casas); }
@@ -261,16 +365,18 @@
   // =====================================================================
   // Moldura: topo com o carro, faixa de demonstração e menu
   // =====================================================================
-  function montarMoldura(rota) {
+  var FORMULARIOS = { abastecer: true, manutencao: true, carro: true };
+  function montarMoldura(rota, param) {
     var carro = carroAtual();
+    var emFormulario = !!FORMULARIOS[rota];
     // Garagem e Ajustes são da família toda: não mostram um carro no topo.
-    var semCarro = !carro || rota === 'boas-vindas' || rota === 'sistema' || rota === 'arquivo';
+    var semCarro = !emFormulario && (!carro || rota === 'boas-vindas' || rota === 'sistema' || rota === 'arquivo');
     var semTopo = rota === 'inicio' || rota === 'ajustes' || rota === 'familia' || rota === 'ajuda';
-    var emFormulario = rota === 'abastecer' || rota === 'manutencao' || rota === 'carro';
 
+    document.body.classList.toggle('modo-entrada', rota === 'sistema' && modo === 'login');
     if (estado.demo) {
       faixaDemo.hidden = false;
-      faixaDemo.innerHTML = 'DEMONSTRAÇÃO: dados de exemplo, nada é salvo. <button type="button" data-acao="sair-demo">Sair da demonstração</button>';
+      faixaDemo.innerHTML = '<span><strong>Demonstração</strong> · dados de exemplo, nada é salvo.</span> <button type="button" data-acao="sair-demo">Sair da demonstração</button>';
     } else {
       faixaDemo.hidden = true;
     }
@@ -285,23 +391,38 @@
       topo.hidden = true; menu.hidden = false; document.body.classList.remove('sem-menu');
       return;
     }
-    document.documentElement.style.setProperty('--cor-carro', tom(carro.cor));
-    var meta = document.querySelector('meta[name=theme-color]');
-    if (meta) meta.setAttribute('content', '#ffffff');
+    document.documentElement.style.setProperty('--cor-carro', tom(carro ? carro.cor : null));
 
     topo.hidden = false;
+    if (emFormulario) {
+      // Formulários: "← Voltar" no topo (o "Cancelar" continua no fim do formulário).
+      var editado = rota === 'carro' && param && param !== 'novo' ? carroPorId(param) : null;
+      var cab;
+      if (rota === 'carro') {
+        cab = '<span class="topo-rotulo">' + (editado ? 'Dados do carro' : 'Cadastro') + '</span>' +
+          '<span class="topo-nome">' + (editado ? '<span class="ponto-carro" aria-hidden="true" style="background:' + tom(editado.cor) + '"></span>' + esc(editado.nome) : 'Novo carro') + '</span>';
+      } else {
+        cab = '<span class="topo-rotulo">Carro selecionado</span>' +
+          '<span class="topo-nome"><span class="ponto-carro" aria-hidden="true"></span>' + esc(carro ? carro.nome : '') + '</span>';
+      }
+      topo.innerHTML = '<div class="topo-dentro topo-formulario">' +
+        '<button type="button" class="botao-voltar" data-acao="voltar-form">' + ICONES.voltar + 'Voltar</button>' +
+        '<div class="topo-carro">' + cab + '</div></div>';
+      menu.hidden = true; document.body.classList.add('sem-menu');
+      return;
+    }
+
     var desc = descricaoCarro(carro);
     topo.innerHTML = '<div class="topo-dentro' + (rota === 'painel' ? ' topo-painel' : '') + '">' +
-      (rota === 'painel' ? '<a class="topo-voltar" href="#inicio" aria-label="Voltar para a Garagem">← Garagem</a>' : '') +
+      (rota === 'painel' ? '<a class="topo-voltar" href="#inicio" aria-label="Voltar para a Garagem">' + ICONES.voltar + 'Garagem</a>' : '') +
       '<div class="topo-carro">' +
       '<span class="topo-rotulo">' + (rota === 'painel' ? 'Painel do carro' : 'Carro selecionado') + '</span>' +
       '<span class="topo-nome"><span class="ponto-carro" aria-hidden="true"></span>' + esc(carro.nome) + '</span>' +
       (desc ? '<span class="topo-rotulo">' + esc(desc) + '</span>' : '') + '</div>' +
-      (carrosAtivos().length > 1 && !emFormulario ? '<button type="button" data-acao="trocar-carro">Trocar carro</button>' : '') +
+      (carrosAtivos().length > 1 ? '<button type="button" data-acao="trocar-carro">Trocar carro</button>' : '') +
       '</div>';
-
-    menu.hidden = emFormulario;
-    document.body.classList.toggle('sem-menu', emFormulario);
+    menu.hidden = false;
+    document.body.classList.remove('sem-menu');
   }
   function marcarMenu(rota) {
     $$('a', menu).forEach(function (a) {
@@ -330,6 +451,8 @@
     fecharJanela();
     redesenhoPendente = false;
     if (TELAS_SISTEMA[modo]) {
+      formulario = null;
+      document.body.setAttribute('data-rota', 'sistema');
       montarMoldura('sistema');
       atualizarIndicador();
       TELAS_SISTEMA[modo]();
@@ -345,7 +468,20 @@
     if (!ativos && !livre) nome = 'boas-vindas';
     if (nome === 'escolher') nome = 'inicio';   // a escolha agora é a própria Garagem
 
-    montarMoldura(nome);
+    // Formulário: guarda de onde a pessoa veio (uma vez por formulário aberto).
+    var hashAgora = location.hash || '#inicio';
+    if (FORMULARIOS[nome]) {
+      if (!formulario || formulario.hash !== hashAgora) {
+        var veioDe = hashDesenhado && hashDesenhado !== hashAgora ? hashDesenhado : null;
+        formulario = { hash: hashAgora, origem: veioDe ? veioDe.replace(/^#/, '') : null, empilhado: !!veioDe && chegouEmpilhando, inicial: null };
+      }
+    } else {
+      formulario = null;
+    }
+    hashDesenhado = hashAgora;
+    document.body.setAttribute('data-rota', nome);
+
+    montarMoldura(nome, r.param);
     var telas = {
       'boas-vindas': telaBoasVindas, inicio: telaGaragem, painel: telaPainel,
       abastecer: telaAbastecer, manutencao: telaManutencao, historico: telaHistorico,
@@ -353,9 +489,51 @@
       arquivo: telaArquivo
     };
     (telas[nome] || telaGaragem)(r.param);
+    if (formulario && formulario.hash === (location.hash || '#inicio')) formulario.inicial = $('.tela form') ? estadoDosCampos() : null;
     if (manterRolagem !== true) window.scrollTo(0, 0);
   }
-  window.addEventListener('hashchange', function () { desenhar(); });
+  // De onde a pessoa veio, para "Voltar" e "Cancelar" dos formulários voltarem ao lugar certo.
+  var hashDesenhado = null;     // tela mostrada antes desta mudança
+  var chegouEmpilhando = false; // a tela atual foi aberta por um link (entrada nova no histórico)
+  window.addEventListener('hashchange', function () {
+    chegouEmpilhando = !navegacaoSubstituida;
+    navegacaoSubstituida = false;
+    desenhar();
+  });
+  var formulario = null;        // { hash, origem, empilhado, inicial }
+  function estadoDosCampos() {
+    return $$('.tela form input, .tela form textarea, .tela form select').map(function (el) {
+      return el.id + '|' + el.name + '|' + ((el.type === 'radio' || el.type === 'checkbox') ? el.checked : el.value);
+    }).join('\n');
+  }
+  function formularioAlterado() {
+    return !!(formulario && formulario.inicial !== null && $('.tela form') && estadoDosCampos() !== formulario.inicial);
+  }
+  function origemPadrao() {
+    var r = rotaAtual();
+    if (r.nome === 'carro') return r.param && r.param !== 'novo' ? 'ajustes' : 'inicio';
+    if (r.param) return 'historico';
+    var c = carroAtual();
+    return c ? 'painel/' + encodeURIComponent(c.id) : 'inicio';
+  }
+  // "← Voltar" e "Cancelar": volta à tela de origem; se algo foi preenchido, pergunta antes.
+  function voltarDoFormulario() {
+    var f = formulario;
+    function sair() {
+      formulario = null;
+      if (f && f.empilhado) history.back();
+      else ir((f && f.origem) || origemPadrao(), true);
+    }
+    if (!formularioAlterado()) { sair(); return; }
+    confirmar({
+      titulo: 'Descartar o que foi preenchido?', perigo: true,
+      texto: 'As mudanças neste formulário <strong>ainda não foram salvas</strong>.',
+      sim: 'Sim, descartar', nao: 'Continuar preenchendo', aoConfirmar: sair
+    });
+  }
+  window.addEventListener('beforeunload', function (ev) {
+    if (formularioAlterado()) { ev.preventDefault(); ev.returnValue = ''; }
+  });
 
   // Cliques gerais
   document.addEventListener('click', function (ev) {
@@ -368,6 +546,7 @@
     else if (acao === 'apagar-abast') apagarAbastecimento(id);
     else if (acao === 'apagar-manut') apagarManutencao(id);
     else if (acao === 'voltar') history.length > 1 ? history.back() : ir('inicio');
+    else if (acao === 'voltar-form') voltarDoFormulario();
     else if (acao === 'backup') fazerBackup();
     else if (acao === 'restaurar') escolherArquivoRestaurar();
     else if (acao === 'planilha') exportarPlanilha();
@@ -440,7 +619,10 @@
   function telaGaragem() {
     var ativos = carrosAtivos();
     var hoje = C.hojeISO();
-    var h = '<h1>Garagem</h1><p>Toque no carro para abrir o painel dele.</p>';
+    var compacta = ativos.length > 3;
+    var h = '<header class="cabecalho-tela">' +
+      (familia && familia.nome && !estado.demo ? '<span class="sobretitulo">' + esc(familia.nome) + '</span>' : '') +
+      '<h1>Garagem</h1><p>' + C.plural(ativos.length, 'carro', 'carros') + ' · toque no carro para abrir o painel dele.</p></header>';
     if (!estado.demo && dadosAntigosDoAparelho()) {
       h += '<div class="caixa caixa-info"><strong>Registros antigos neste celular</strong>' +
         '<p style="margin:6px 0 10px">Encontramos registros da versão antiga do aplicativo guardados só neste aparelho. Envie para a nuvem para não perdê-los.</p>' +
@@ -454,22 +636,26 @@
         '<button class="botao botao-secundario botao-pequeno" type="button" data-acao="backup">Salvar cópia agora</button></div>';
     }
     if (ativos.length > 6) {
-      h += '<div class="campo"><label for="busca-carro">Procurar pelo nome</label>' +
+      h += '<div class="campo busca"><label for="busca-carro">Procurar pelo nome</label>' +
         '<input type="text" id="busca-carro" autocomplete="off" placeholder="Ex.: Gol"></div>';
     }
-    h += '<div class="lista-carros garagem' + (ativos.length > 3 ? ' lista-compacta' : '') + '">';
+    h += '<div class="lista-carros garagem' + (compacta ? ' lista-compacta' : '') + '">';
     ativos.forEach(function (c) {
       var r = resumoCarro(c);
       var aviso = r.lembretes.filter(function (l) { return l.situacao !== 'semDados'; })[0] || r.lembretes[0];
+      var desc = descricaoCarro(c);
       h += '<a class="escolha-carro" href="#painel/' + encodeURIComponent(c.id) + '" data-carro="' + esc(c.id) + '" data-nome="' + esc(c.nome.toLowerCase()) + '" style="--tom:' + tom(c.cor) + '">' +
-        '<span class="nome">' + esc(c.nome) + '</span>' +
-        (descricaoCarro(c) ? '<span class="sub">' + esc(descricaoCarro(c)) + '</span>' : '') +
-        '<span class="sub">' + (r.km !== null ? 'Quilometragem: <strong>' + C.fmtKm(r.km) + '</strong>' : 'Nenhum registro ainda') + '</span>' +
+        '<span class="cartao-carro-topo">' + emblema(c) +
+        '<span class="identidade"><span class="nome">' + esc(c.nome) + '</span>' +
+        (desc ? '<span class="sub descricao">' + esc(desc) + '</span>' : '') + '</span>' +
+        '<span class="abrir">' + ICONES.seta + '<span class="sr">Abrir painel</span></span></span>' +
+        '<span class="km-carro"><span class="sobretitulo">Quilometragem</span>' +
+        (r.km !== null ? (compacta ? '<strong class="km-texto">' + C.fmtKm(r.km) + '</strong>' : odometro(r.km)) : '<span class="sem-registro">Nenhum registro ainda</span>') + '</span>' +
         (aviso ? '<span class="alerta alerta-' + aviso.situacao + '">' + esc(aviso.mensagem) + '</span>' : '') +
-        '<span class="abrir" aria-hidden="true">Abrir painel →</span></a>';
+        '</a>';
     });
+    h += '<a class="vaga-livre" href="#carro/novo">' + ICONES.mais + '<span>+ Adicionar carro</span></a>';
     h += '</div><p class="vazio" id="busca-vazia" hidden>Nenhum carro com esse nome.</p>';
-    h += '<a class="botao botao-secundario botao-grande" href="#carro/novo">+ Adicionar carro</a>';
     var arq = carrosArquivados().length;
     if (arq) h += '<p class="legenda-simples">' + C.plural(arq, 'carro arquivado', 'carros arquivados') + ': veja em <a href="#ajustes">Ajustes</a>.</p>';
     tela.innerHTML = h;
@@ -518,22 +704,22 @@
     var h = '';
     urgentes.forEach(function (l) { h += htmlLembrete(l); });
 
-    h += '<a class="botao botao-carro botao-grande" href="#abastecer">Registrar abastecimento</a>';
-    h += '<a class="botao botao-secundario botao-grande" href="#manutencao">Registrar manutenção</a>';
+    // Quadro de instrumentos: quilometragem (odômetro) e consumo recente.
+    h += '<section class="quadro" aria-label="Números do carro" style="--tom:' + tom(carro.cor) + '">' +
+      '<div class="quadro-item"><span class="info-rotulo">Quilometragem atual</span>' +
+      (r.km !== null ? '<span class="info-valor">' + odometro(r.km) + '</span><span class="info-extra">Último número anotado</span>'
+        : '<span class="info-valor">—</span><span class="info-extra">Aparece depois do primeiro registro.</span>') + '</div>' +
+      '<div class="quadro-item"><span class="info-rotulo">Consumo recente</span>' +
+      (r.recente ? '<span class="info-valor">' + C.fmtNum(r.recente.kmPorLitro, 1) + ' <small>km/L</small></span>' +
+        '<span class="info-extra">Anda ' + C.fmtNum(r.recente.kmPorLitro, 1) + ' km com 1 litro. Custo de ' + C.fmtDinheiro(r.recente.custoPorKm) + ' por km.</span>'
+        : '<span class="info-valor">—</span><span class="info-extra">Ainda não dá para calcular: são necessários pelo menos 2 abastecimentos com tanque cheio.</span>') +
+      '</div></section>';
+
+    h += '<div class="acoes-principais">' +
+      '<a class="botao botao-carro botao-grande acao-registro" href="#abastecer">' + ICONES.bomba + '<span>Registrar abastecimento</span></a>' +
+      '<a class="botao botao-secundario botao-grande acao-registro" href="#manutencao">' + ICONES.chave + '<span>Registrar manutenção</span></a></div>';
 
     h += '<div class="grade">';
-    h += '<div class="cartao"><span class="info-rotulo">Quilometragem atual</span><span class="info-valor">' +
-      (r.km !== null ? C.fmtKm(r.km) : '—') + '</span>' +
-      (r.km === null ? '<span class="info-extra">Aparece depois do primeiro registro.</span>' : '<span class="info-extra">Último número anotado</span>') + '</div>';
-
-    h += '<div class="cartao"><span class="info-rotulo">Consumo recente</span>';
-    if (r.recente) {
-      h += '<span class="info-valor">' + C.fmtNum(r.recente.kmPorLitro, 1) + ' km/L</span>' +
-        '<span class="info-extra">Anda ' + C.fmtNum(r.recente.kmPorLitro, 1) + ' km com 1 litro. Custo de ' + C.fmtDinheiro(r.recente.custoPorKm) + ' por km.</span>';
-    } else {
-      h += '<span class="info-valor">—</span><span class="info-extra">Ainda não dá para calcular: são necessários pelo menos 2 abastecimentos com tanque cheio.</span>';
-    }
-    h += '</div>';
 
     h += '<div class="cartao"><span class="info-rotulo">Gasto com combustível em ' + C.fmtMes(mes).split(' de ')[0].toLowerCase() + '</span>' +
       '<span class="info-valor">' + C.fmtDinheiro(gastoMes) + '</span>' +
@@ -640,7 +826,7 @@
       '<textarea id="obs" maxlength="300" placeholder="Ex.: posto da esquina, viagem para a praia">' + esc(reg ? reg.obs : '') + '</textarea></div>';
 
     h += '<button class="botao botao-carro botao-grande" type="submit">Salvar abastecimento</button>';
-    h += '<button class="botao botao-secundario" type="button" data-acao="voltar">Cancelar</button>';
+    h += '<button class="botao botao-secundario" type="button" data-acao="voltar-form">Cancelar</button>';
     if (reg) h += '<button class="botao botao-perigo" type="button" data-acao="apagar-abast" data-id="' + esc(reg.id) + '">Apagar este abastecimento</button>';
     h += '</form>';
     tela.innerHTML = h;
@@ -825,7 +1011,7 @@
       '<textarea id="obs" maxlength="300" placeholder="Ex.: óleo 5W30, oficina do Zé">' + esc(reg ? reg.obs : '') + '</textarea></div>';
 
     h += '<button class="botao botao-carro botao-grande" type="submit">Salvar manutenção</button>';
-    h += '<button class="botao botao-secundario" type="button" data-acao="voltar">Cancelar</button>';
+    h += '<button class="botao botao-secundario" type="button" data-acao="voltar-form">Cancelar</button>';
     if (reg) h += '<button class="botao botao-perigo" type="button" data-acao="apagar-manut" data-id="' + esc(reg.id) + '">Apagar esta manutenção</button>';
     h += '</form>';
     tela.innerHTML = h;
@@ -1001,10 +1187,11 @@
           total += a.valor; litros += a.litros; if (a.kmDesdeAnterior) km += a.kmDesdeAnterior;
           if (a.trecho) { dist += a.trecho.distancia; lt += a.trecho.litros; }
         });
-        h += '<div class="resumo-periodo"><strong>' + C.plural(lista.length, 'abastecimento', 'abastecimentos') + '</strong> no período<br>' +
-          'Total gasto: <strong>' + C.fmtDinheiro(total) + '</strong><br>' + C.fmtNum(litros, 1) + ' litros' +
-          (km ? ' • ' + C.fmtKm(km) + ' rodados' : '') +
-          (lt ? '<br>Consumo médio: <strong>' + C.fmtNum(dist / lt, 1) + ' km/L</strong>' : '') + '</div>';
+        h += '<div class="resumo-periodo"><p class="resumo-titulo"><strong>' + C.plural(lista.length, 'abastecimento', 'abastecimentos') + '</strong> no período</p>' +
+          '<dl class="numeros"><div><dt>Total gasto</dt><dd>' + C.fmtDinheiro(total) + '</dd></div>' +
+          '<div><dt>Litros</dt><dd>' + C.fmtNum(litros, 1) + ' L</dd></div>' +
+          (lt ? '<div><dt>Consumo médio</dt><dd>' + C.fmtNum(dist / lt, 1) + ' km/L</dd></div>' : '') +
+          (km ? '<div><dt>Rodados</dt><dd>' + C.fmtKm(km) + '</dd></div>' : '') + '</dl></div>';
         lista.forEach(function (a) { h += htmlAbastecimento(a, somenteLeitura); });
       } else {
         h += vazio('', r.abastecimentos.length ? 'Nenhum abastecimento neste período. Tente “Tudo”.' : 'Nenhum abastecimento registrado ainda.');
@@ -1017,8 +1204,8 @@
       });
       if (ms.length) {
         var gasto = ms.reduce(function (s, m) { return s + (m.valor || 0); }, 0);
-        h += '<div class="resumo-periodo"><strong>' + C.plural(ms.length, 'manutenção', 'manutenções') + '</strong> no período' +
-          (gasto ? '<br>Total gasto: <strong>' + C.fmtDinheiro(gasto) + '</strong>' : '') + '</div>';
+        h += '<div class="resumo-periodo"><p class="resumo-titulo"><strong>' + C.plural(ms.length, 'manutenção', 'manutenções') + '</strong> no período</p>' +
+          (gasto ? '<dl class="numeros"><div><dt>Total gasto</dt><dd>' + C.fmtDinheiro(gasto) + '</dd></div></dl>' : '') + '</div>';
         ms.forEach(function (m) { h += htmlManutencao(m, somenteLeitura); });
       } else {
         h += vazio('', r.manutencoes.length ? 'Nenhuma manutenção neste período. Tente “Tudo”.' : 'Nenhuma manutenção registrada ainda.');
@@ -1052,27 +1239,27 @@
       variacao = ' (' + (a.variacaoPreco.reais > 0 ? '▲ ' : '▼ ') + C.fmtNum(Math.abs(a.variacaoPreco.pct), 1) + '% ' +
         (a.variacaoPreco.reais > 0 ? 'mais caro' : 'mais barato') + ')';
     }
-    return '<div class="cartao registro">' +
+    return '<div class="cartao registro">' + '<span class="registro-icone registro-abast">' + ICONES.bomba + '</span><div class="registro-corpo">' +
       '<div class="linha-topo"><span class="data">' + C.fmtData(a.data) + '</span><span class="valor">' + C.fmtDinheiro(a.valor) + '</span></div>' +
       '<p class="detalhes">' + C.fmtKm(a.km) + ' • ' + C.fmtNum(a.litros, 2) + ' L • ' + C.fmtDinheiro(a.precoLitro) + '/L' + variacao +
       (a.combustivel ? ' • ' + esc(a.combustivel) : '') + (a.tanqueCheio === false ? ' <span class="etiqueta">não completou</span>' : '') + '</p>' +
       '<p class="calc">' + calcTxt + '</p>' +
       (a.obs ? '<p class="obs">' + esc(a.obs) + '</p>' : '') +
       (somenteLeitura ? '' : '<div class="acoes"><a class="botao botao-secundario" href="#abastecer/' + encodeURIComponent(a.id) + '">Corrigir</a>' +
-      '<button class="botao botao-perigo" type="button" data-acao="apagar-abast" data-id="' + esc(a.id) + '">Apagar</button></div>') + '</div>';
+      '<button class="botao botao-perigo" type="button" data-acao="apagar-abast" data-id="' + esc(a.id) + '">Apagar</button></div>') + '</div></div>';
   }
 
   function htmlManutencao(m, somenteLeitura) {
     var lemb = [];
     if (m.lembreteKm) lemb.push('daqui a ' + C.fmtKm(m.lembreteKm) + ' (com ' + C.fmtKm(m.km + m.lembreteKm) + ')');
     if (m.lembreteData) lemb.push('em ' + C.fmtData(m.lembreteData));
-    return '<div class="cartao registro">' +
+    return '<div class="cartao registro">' + '<span class="registro-icone registro-manut">' + ICONES.chave + '</span><div class="registro-corpo">' +
       '<div class="linha-topo"><span class="data">' + C.fmtData(m.data) + '</span>' + (m.valor ? '<span class="valor">' + C.fmtDinheiro(m.valor) + '</span>' : '') + '</div>' +
       '<p class="detalhes"><strong>' + esc(C.nomeManutencao(m)) + '</strong> • ' + C.fmtKm(m.km) + '</p>' +
       (lemb.length ? '<p class="calc">Lembrete: ' + lemb.join(' ou ') + '</p>' : '') +
       (m.obs ? '<p class="obs">' + esc(m.obs) + '</p>' : '') +
       (somenteLeitura ? '' : '<div class="acoes"><a class="botao botao-secundario" href="#manutencao/' + encodeURIComponent(m.id) + '">Corrigir</a>' +
-      '<button class="botao botao-perigo" type="button" data-acao="apagar-manut" data-id="' + esc(m.id) + '">Apagar</button></div>') + '</div>';
+      '<button class="botao botao-perigo" type="button" data-acao="apagar-manut" data-id="' + esc(m.id) + '">Apagar</button></div>') + '</div></div>';
   }
 
   // =====================================================================
@@ -1213,29 +1400,53 @@
   // =====================================================================
   // Tela: ajustes
   // =====================================================================
+  function linhaAjuste(href, icone, titulo, sub, extra) {
+    var tag = href ? 'a' : 'button';
+    return '<' + tag + ' class="linha-ajuste"' + (href ? ' href="' + href + '"' : ' type="button"') + (extra || '') + '>' + icone +
+      '<span class="linha-texto"><span class="linha-titulo">' + titulo + '</span>' + (sub ? '<span class="linha-sub">' + sub + '</span>' : '') + '</span>' +
+      (href ? ICONES.seta : '') + '</' + tag + '>';
+  }
+  function grupoOpcoes(nome, rotulo, opcoes, atual) {
+    return '<div class="campo"><span class="rotulo" id="rot-' + nome + '">' + rotulo + '</span>' +
+      '<div class="opcoes segmentado" role="radiogroup" aria-labelledby="rot-' + nome + '">' + opcoes.map(function (o) {
+        return '<label class="opcao"><input type="radio" name="' + nome + '" value="' + o[0] + '"' + (atual === o[0] ? ' checked' : '') + '>' +
+          '<span>' + o[2] + '<span>' + o[1] + '</span></span></label>';
+      }).join('') + '</div></div>';
+  }
+
   function telaAjustes() {
-    var h = '<h1>Ajustes</h1>';
-    h += '<div class="cartao"><h2>Carros</h2>';
+    var h = '<header class="cabecalho-tela"><h1>Ajustes</h1></header>';
+    h += '<section class="cartao grupo-ajustes"><h2>Carros</h2><div class="lista-ajustes">';
     carrosAtivos().forEach(function (c) {
-      h += '<a class="botao botao-secundario" href="#carro/' + encodeURIComponent(c.id) + '" style="justify-content:flex-start">' +
-        '<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:' + tom(c.cor) + '"></span> Dados do ' + esc(c.nome) + '</a>';
+      var desc = descricaoCarro(c);
+      h += linhaAjuste('#carro/' + encodeURIComponent(c.id), emblema(c), esc(c.nome), (desc ? esc(desc) + ' · ' : '') + 'dados e troca de óleo');
     });
-    h += '<a class="botao botao-principal" href="#carro/novo">Adicionar carro</a>';
-    h += '<p class="legenda-simples">Nos dados de cada carro você muda o intervalo da troca de óleo e pode arquivar o carro.</p></div>';
+    h += linhaAjuste('#carro/novo', '<span class="emblema emblema-mais" aria-hidden="true">' + ICONES.mais + '</span>', 'Adicionar carro', '');
+    h += '</div><p class="legenda-simples">Nos dados de cada carro você muda o intervalo da troca de óleo e pode arquivar o carro.</p></section>';
     var arquivados = carrosArquivados();
     if (arquivados.length) {
-      h += '<div class="cartao"><h2>Carros arquivados</h2>' +
+      h += '<section class="cartao"><h2>Carros arquivados</h2>' +
         '<p>Guardados com todos os abastecimentos e manutenções. Não recebem registros novos.</p>' +
-        arquivados.map(htmlCarroArquivado).join('') + '</div>';
+        arquivados.map(htmlCarroArquivado).join('') + '</section>';
     }
 
+    h += '<section class="cartao" id="aparencia"><h2>Aparência</h2>' +
+      grupoOpcoes('texto', 'Tamanho do texto', [
+        ['padrao', 'Padrão', '<span class="amostra amostra-1" aria-hidden="true">Aa</span>'],
+        ['maior', 'Maior', '<span class="amostra amostra-2" aria-hidden="true">Aa</span>'],
+        ['enorme', 'Ainda maior', '<span class="amostra amostra-3" aria-hidden="true">Aa</span>']], aparencia.texto) +
+      grupoOpcoes('tema', 'Tema', [
+        ['claro', 'Claro', ICONES.sol], ['escuro', 'Escuro', ICONES.lua], ['auto', 'Automático', ICONES.auto]], aparencia.tema) +
+      '<p class="legenda-simples">Automático segue o modo claro ou escuro do celular. ' +
+      (estado.demo ? 'Na demonstração, a escolha fica só neste aparelho.' : 'A escolha acompanha a sua conta: vale também em outro celular quando você entrar.') + '</p></section>';
+
     if (!estado.demo) {
-      h += '<div class="cartao"><h2>Família</h2>' +
-        '<p>Conectado como <strong>' + esc(usuarioAtual && usuarioAtual.email) + '</strong>.</p>' +
-        '<a class="botao botao-secundario" href="#familia">Pessoas com acesso</a>' +
-        '<button class="botao botao-secundario" type="button" data-acao="sair-conta">Sair da conta</button></div>';
+      h += '<section class="cartao grupo-ajustes"><h2>Família</h2>' +
+        '<p class="conectado">Conectado como <strong>' + esc(usuarioAtual && usuarioAtual.email) + '</strong></p><div class="lista-ajustes">' +
+        linhaAjuste('#familia', ICONES.pessoas, 'Pessoas com acesso', 'Quem vê os mesmos carros e registros') +
+        linhaAjuste(null, ICONES.sair, 'Sair da conta', '', ' data-acao="sair-conta"') + '</div></section>';
     }
-    h += '<div class="cartao"><h2>Cópia de segurança</h2>' +
+    h += '<section class="cartao"><h2>Cópia de segurança</h2>' +
       (estado.demo ? '<p>Na demonstração os dados ficam só na memória deste aparelho.</p>' :
         '<p>Os dados ficam guardados na nuvem da família (Firebase) e aparecem em todos os celulares autorizados.</p>' +
         '<p>Mesmo assim, salve uma cópia de vez em quando: ela protege contra apagar algo sem querer. Você pode enviá-la para si mesmo pelo WhatsApp, e-mail ou Google Drive.</p>') +
@@ -1243,15 +1454,20 @@
       '<button class="botao botao-principal" type="button" data-acao="backup">Salvar cópia de segurança</button>' +
       '<button class="botao botao-secundario" type="button" data-acao="restaurar">Usar uma cópia de segurança</button>' +
       (dadosAntigosDoAparelho() && !estado.demo ? '<button class="botao botao-secundario" type="button" data-acao="importar-antigos">Enviar registros antigos deste aparelho</button>' : '') +
-      '<button class="botao botao-secundario" type="button" data-acao="planilha">Exportar planilha (Excel)</button></div>';
+      '<button class="botao botao-secundario" type="button" data-acao="planilha">Exportar planilha (Excel)</button></section>';
 
-    h += '<div class="cartao"><h2>Ajuda</h2><a class="botao botao-secundario" href="#ajuda">Como usar e como os cálculos são feitos</a></div>';
+    h += '<section class="cartao grupo-ajustes"><h2>Ajuda</h2><div class="lista-ajustes">' +
+      linhaAjuste('#ajuda', ICONES.ajuda, 'Como usar e como os cálculos são feitos', '') + '</div></section>';
 
-    h += '<div class="cartao"><h2>Apagar dados</h2>';
+    h += '<section class="cartao zona-perigo"><h2>Apagar dados</h2>';
     if (estado.demo) h += '<button class="botao botao-perigo" type="button" data-acao="sair-demo">Sair da demonstração</button>';
     else h += '<button class="botao botao-perigo" type="button" id="apagar-tudo">Apagar todos os carros e registros</button>';
-    h += '</div>';
+    h += '</section>';
     tela.innerHTML = h;
+
+    $$('input[name=texto], input[name=tema]').forEach(function (i) {
+      i.addEventListener('change', function () { mudarAparencia(i.name, i.value); });
+    });
 
     if ($('#apagar-tudo')) $('#apagar-tudo').addEventListener('click', function () {
       confirmar({
@@ -1297,7 +1513,7 @@
     h += campoNumero('oleoKm', 'Trocar o óleo a cada', textoNumero(c.oleoKm), 'km', 'O padrão é 5.000 km. Confira no manual do carro. Deixe em branco para não ser avisado por quilometragem.', { inteiro: true });
     h += campoNumero('oleoMeses', 'Ou a cada quantos meses', c.oleoMeses ? String(c.oleoMeses) : '', 'meses', 'Opcional. Ex.: 6 ou 12. Será avisado o que vier primeiro.', { inteiro: true, opcional: true });
     h += '<button class="botao botao-principal botao-grande" type="submit">Salvar</button>';
-    h += '<a class="botao botao-secundario" href="' + (primeiro ? '#inicio' : '#ajustes') + '">Cancelar</a>';
+    h += '<button class="botao botao-secundario" type="button" data-acao="voltar-form">Cancelar</button>';
     h += '</form>';
     if (!novo) {
       h += '<hr class="separador"><h2>Guardar ou apagar</h2>' +
@@ -1396,8 +1612,9 @@
       '<div class="cartao"><h2>Como usar</h2>' +
       '<p><strong>1.</strong> Toda vez que abastecer, toque em <strong>Registrar abastecimento</strong> e preencha: quilometragem do painel, litros e valor pago (estão na nota).</p>' +
       '<p><strong>2.</strong> Quando fizer troca de óleo, pneus ou outro serviço, toque em <strong>Registrar manutenção</strong>.</p>' +
-      '<p><strong>3.</strong> A tela de <strong>Início</strong> mostra os números mais importantes e avisa quando uma manutenção estiver chegando ou atrasada.</p>' +
-      '<p><strong>4.</strong> Confira sempre o nome do carro no topo colorido da tela antes de salvar.</p>' +
+      '<p><strong>3.</strong> O <strong>painel</strong> de cada carro mostra os números mais importantes e avisa quando uma manutenção estiver chegando ou atrasada.</p>' +
+      '<p><strong>4.</strong> Confira sempre o nome do carro no alto da tela antes de salvar. Se desistir, toque em <strong>← Voltar</strong> ou <strong>Cancelar</strong>.</p>' +
+      '<p><strong>Letras pequenas?</strong> Em <strong>Ajustes → Aparência</strong> dá para aumentar o texto e escolher o tema claro ou escuro.</p>' +
       '<p><strong>Dica:</strong> para abrir mais rápido, adicione este aplicativo à tela inicial do celular (no menu do navegador, toque em “Adicionar à tela inicial”).</p></div>' +
       '<div class="cartao"><h2>Onde ficam os dados?</h2>' +
       '<p>Na <strong>nuvem da família</strong> (Google Firebase). Todos os celulares autorizados veem os mesmos dados, e o que um registra aparece no outro em poucos segundos.</p>' +
@@ -1672,7 +1889,7 @@
   // Demonstração (só na memória deste aparelho; nunca vai para a nuvem)
   // =====================================================================
   function carregarDemo() {
-    if (window.Nuvem && nuvemPronta) Nuvem.pararDeOuvir();
+    if (window.Nuvem && nuvemPronta) { Nuvem.pararDeOuvir(); Nuvem.pararPerfil(); }
     var d = window.DadosDemo.gerar(C, novoId);
     estado = estadoVazio();
     estado.carros = d.carros; estado.abastecimentos = d.abastecimentos; estado.manutencoes = d.manutencoes;
@@ -1690,6 +1907,7 @@
         estado = estadoVazio(); sessao.escolheuCarro = false;
         modo = nuvemPronta ? 'login' : 'sem-config';
         if (location.hash !== '#inicio') location.replace('#inicio');
+        if (nuvemPronta && usuarioAtual) Nuvem.ouvirPerfil(usuarioAtual.uid, aoReceberPerfil);
         if (nuvemPronta) decidirPorUsuario(); else desenhar();
       }
     });
@@ -1755,24 +1973,46 @@
     $('#tentar').addEventListener('click', function () { location.reload(); });
   }
 
+  function marcaDoApp(grande) {
+    return '<div class="marca-app' + (grande ? ' marca-app-grande' : '') + '"><img src="icone.svg" alt="" width="48" height="48">' +
+      '<span><strong>Controle do Carro</strong><small>Abastecimentos e manutenções da família</small></span></div>';
+  }
   function telaLogin() {
-    tela.innerHTML = '<h1>Controle do Carro</h1>' +
-      '<p>Entre para ver os abastecimentos e as manutenções dos carros da família.</p><div id="erros"></div>' +
-      '<div class="cartao"><button class="botao botao-principal botao-grande" type="button" id="entrar-google">' +
-      'Entrar com Google</button>' +
-      '<p class="legenda-simples" style="margin:0">Tem Gmail? Use a conta Google que já está no celular. Não precisa de senha nova.</p></div>' +
-      '<div class="cartao"><h2>Não tem Gmail?</h2><p>Entre com o e-mail e a senha que você recebeu de quem configurou o aplicativo.</p><form id="form-login" novalidate>' +
+    tela.innerHTML = '<div class="entrada">' +
+      '<aside class="entrada-marca" aria-hidden="true">' + marcaDoApp(true) +
+      '<p class="entrada-frase">Cada abastecimento anotado.<br>Cada manutenção no prazo.</p>' +
+      '<svg class="entrada-ilustracao" viewBox="0 0 320 190" fill="none" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M40 160a120 120 0 0 1 240 0" stroke="currentColor" stroke-opacity=".22" stroke-width="14"/>' +
+      '<path d="M40 160a120 120 0 0 1 178-105" stroke="var(--farol)" stroke-width="14"/>' +
+      '<g stroke="currentColor" stroke-opacity=".5" stroke-width="3"><path d="M60 160h12M248 160h12M160 60v12M89 89l9 9M231 89l-9 9"/></g>' +
+      '<path d="M160 160 214 104" stroke="currentColor" stroke-width="6"/><circle cx="160" cy="160" r="12" fill="currentColor"/>' +
+      '<rect x="112" y="172" width="96" height="16" rx="5" fill="currentColor" fill-opacity=".14"/></svg>' +
+      '<ul class="entrada-lista"><li>' + ICONES.bomba + 'Consumo e gastos calculados sozinhos</li>' +
+      '<li>' + ICONES.chave + 'Aviso da troca de óleo e de outras manutenções</li>' +
+      '<li>' + ICONES.pessoas + 'Os mesmos dados no celular de cada pessoa</li></ul></aside>' +
+      '<div class="entrada-corpo">' + marcaDoApp(false) +
+      '<section class="cartao entrada-cartao"><h1>Entrar</h1>' +
+      '<div id="erros"></div>' +
+      '<form id="form-login" novalidate>' +
       '<div class="campo"><label for="email">E-mail</label><input type="email" id="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false"></div>' +
-      '<div class="campo"><label for="senha">Senha</label><input type="password" id="senha" autocomplete="current-password">' +
-      '<label class="dica" style="display:flex;gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="mostrar-senha" style="width:24px;height:24px"> Mostrar a senha</label></div>' +
-      '<button class="botao botao-principal" type="submit" id="botao-entrar">Entrar</button>' +
-      '<button class="link-botao" type="button" id="esqueci">Esqueci minha senha</button></form></div>' +
-      '<div class="cartao"><h2>Só quer conhecer?</h2><p>Veja como funciona com dados de exemplo, sem entrar.</p>' +
-      '<button class="botao botao-secundario" type="button" data-acao="demo">Ver demonstração</button></div>' +
-      '<p class="legenda-simples">Só as pessoas autorizadas pela família conseguem ver os dados.</p>';
+      '<div class="campo campo-senha"><label for="senha">Senha</label><div class="senha-caixa"><input type="password" id="senha" autocomplete="current-password">' +
+      '<button type="button" class="mostrar-senha" id="mostrar-senha" aria-pressed="false" aria-controls="senha">' + ICONES.olho + '<span>Mostrar</span></button></div>' +
+      '<button class="link-botao esqueci" type="button" id="esqueci">Esqueci minha senha</button></div>' +
+      '<button class="botao botao-principal botao-grande" type="submit" id="botao-entrar">Entrar</button></form>' +
+      '<div class="separador-ou"><span>ou</span></div>' +
+      '<button class="botao botao-secundario botao-google" type="button" id="entrar-google">' + G_GOOGLE + 'Entrar com Google</button>' +
+      '<p class="legenda-simples entrada-gmail">Tem Gmail? Use a conta que já está no celular.</p></section>' +
+      '<section class="entrada-demo"><p><strong>Só quer conhecer?</strong> Veja o app com dados de exemplo, sem entrar.</p>' +
+      '<button class="botao botao-secundario" type="button" data-acao="demo">Ver demonstração</button></section>' +
+      '<p class="legenda-simples entrada-rodape">Só as pessoas autorizadas pela família conseguem ver os dados.</p></div></div>';
 
     function erro(msg) { $('#erros').innerHTML = caixa('erro', msg); $('#erros').scrollIntoView({ block: 'center' }); }
-    $('#mostrar-senha').addEventListener('change', function () { $('#senha').type = this.checked ? 'text' : 'password'; });
+    $('#mostrar-senha').addEventListener('click', function () {
+      var mostrar = $('#senha').type === 'password';
+      $('#senha').type = mostrar ? 'text' : 'password';
+      this.setAttribute('aria-pressed', String(mostrar));
+      $('span', this).textContent = mostrar ? 'Esconder' : 'Mostrar';
+    });
     $('#entrar-google').addEventListener('click', function () {
       var b = this; ocupado(b, true, 'Abrindo o Google…');
       Nuvem.entrarGoogle().catch(function (e) { ocupado(b, false); erro(mensagemErro(e)); });
@@ -2023,6 +2263,8 @@
     }
     Nuvem.aoMudarUsuario(function (u) {
       usuarioAtual = u;
+      // Preferências de aparência da pessoa: valem em qualquer celular em que ela entrar.
+      if (u && modo !== 'demo') Nuvem.ouvirPerfil(u.uid, aoReceberPerfil); else Nuvem.pararPerfil();
       if (modo === 'demo') return;
       decidirPorUsuario();
     });
