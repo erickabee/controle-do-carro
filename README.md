@@ -2,7 +2,7 @@
 
 Aplicativo para a minha família anotar os abastecimentos e as manutenções de dois carros. Foi feito pensando nos meus pais, que não têm muita familiaridade com tecnologia: botões grandes, poucos campos, tudo em português do Brasil, e os mesmos dados no celular de cada um.
 
-**Status:** ainda **não publicado**. Para colocar no ar, falta criar o projeto no Firebase e ativar o GitHub Pages. Enquanto isso, o app pode ser aberto no computador em modo demonstração, sem login e com dados fictícios.
+**▶ [Abrir o app](https://erickabee.github.io/controle-do-carro/)**: publicado em 09/11/2026 no GitHub Pages, com um projeto Firebase próprio no plano gratuito. O acesso exige login com um e-mail autorizado pela família. Para conhecer sem login, use o botão **Ver demonstração** na tela de entrada, que mostra o app com dados fictícios.
 
 | Entrada | Painel do carro | Relatórios |
 |---|---|---|
@@ -29,7 +29,7 @@ Com dois carros em casa, é difícil lembrar de cabeça quanto se abasteceu, se 
 
 Cada pessoa entra com a conta Google ou com e-mail e senha. Só entram os e-mails que a família autorizou, numa tela do próprio app. Depois disso todos veem os mesmos carros e registros, e o que um anota aparece no celular do outro. Sem internet, dá para continuar anotando: os registros ficam guardados no aparelho e são enviados quando a conexão volta.
 
-**Estado atual:** isso depende de um projeto Firebase da família, que **ainda não foi criado**, e de o site estar publicado, o que **também ainda não aconteceu**. A sincronização e as regras de acesso foram testadas apenas nos **emuladores** do Firebase, não num projeto real.
+**Estado atual:** o site está publicado e ligado ao projeto Firebase da família. No projeto real foi conferido que a tela de entrada carrega, que os logins por Google e por e-mail e senha estão ativos e que o banco recusa acesso sem login. O fluxo completo com contas reais (criar a família, sincronizar entre celulares, regras de acesso por e-mail) foi testado nos **emuladores** do Firebase e ainda não foi verificado no projeto real.
 
 ## Decisões técnicas
 

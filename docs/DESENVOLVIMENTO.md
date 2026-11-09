@@ -68,9 +68,9 @@ npm run test:regras
 |---|---|---|---|
 | Lógica dos cálculos | [`testes/calculos.test.js`](../testes/calculos.test.js) | 15 testes: leitura de números no formato brasileiro, consumo pelo tanque cheio, validações, lembretes de óleo e pneus | No ambiente de desenvolvimento (Node) e no GitHub Actions |
 | Regras de segurança | [`testes/regras.test.mjs`](../testes/regras.test.mjs) | 41 testes: acesso sem login, e-mail não verificado, isolamento entre famílias, validação dos dados, gravação em lote | No **emulador** do Firestore, no ambiente de desenvolvimento e no GitHub Actions |
-| Firebase real | — | — | **Ainda não executado**: o projeto de produção não foi criado |
+| Firebase real | — | Verificação manual em 09/11/2026: a tela de entrada carrega, os logins por Google e por e-mail e senha estão ativos e o Firestore recusa leitura sem login | Projeto de produção. O fluxo completo com contas reais **ainda não foi verificado**, e não há testes automáticos contra o projeto real |
 
-O workflow [`.github/workflows/publicar.yml`](../.github/workflows/publicar.yml) roda os dois conjuntos a cada envio para o `main`. Na primeira execução, em 04/11/2026, a etapa de testes passou e a de publicação falhou porque o segredo `FIREBASE_CONFIG` ainda não existia.
+O workflow [`.github/workflows/publicar.yml`](../.github/workflows/publicar.yml) roda os dois conjuntos a cada envio para o `main`. Nas duas primeiras execuções, a etapa de testes passou e a de publicação falhou porque o segredo `FIREBASE_CONFIG` ainda não existia. Na terceira, em 09/11/2026, os testes passaram e o site foi publicado.
 
 Não há testes automatizados de tela no repositório. Testar as regras no emulador não substitui uma verificação num projeto Firebase real.
 
