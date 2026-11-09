@@ -18,8 +18,8 @@
   ];
   // Tons sóbrios usados SÓ na tela. O valor salvo de cada carro continua o mesmo.
   var TONS = {
-    '#1e40af': '#3f5a73', '#b91c1c': '#8e3b36', '#15803d': '#4e6b4a',
-    '#6d28d9': '#5e4b73', '#c2410c': '#a0582a', '#374151': '#4b4f55'
+    '#1e40af': '#4f7299', '#b91c1c': '#c0504a', '#15803d': '#3b8a65',
+    '#6d28d9': '#7660b0', '#c2410c': '#bf6a22', '#374151': '#6b7280'
   };
   function tom(cor) { var c = String(cor || '').toLowerCase(); return TONS[c] || (/^#[0-9a-f]{6}$/.test(c) ? c : TONS['#1e40af']); }
   function marca(tipo) { return '<div class="marca marca-' + tipo + '" aria-hidden="true"></div>'; }
@@ -263,7 +263,7 @@
     }
     document.documentElement.style.setProperty('--cor-carro', tom(carro.cor));
     var meta = document.querySelector('meta[name=theme-color]');
-    if (meta) meta.setAttribute('content', '#f5f1ea');
+    if (meta) meta.setAttribute('content', '#ffffff');
 
     topo.hidden = false;
     var desc = descricaoCarro(carro);
