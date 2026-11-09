@@ -106,13 +106,10 @@ async function cadastrarCarro(p, nome) {
   await okJanela(p);
 }
 async function escolher(p, nome) {
-  await ir(p, '#ajustes');
-  if (await p.isVisible('[data-acao=trocar-carro]')) {
-    await p.click('[data-acao=trocar-carro] >> nth=0');
-    await p.waitForSelector('.escolha-carro');
-    await p.click(`.escolha-carro:has(.nome:text-is("${nome}"))`);
-    await p.waitForTimeout(200);
-  }
+  await ir(p, '#inicio');
+  await p.waitForSelector('.garagem .escolha-carro');
+  await p.click(`.garagem .escolha-carro:has(.nome:text-is("${nome}"))`);
+  await p.waitForSelector(`.topo-nome:has-text("${nome}")`);
 }
 // Salva o formulário; se o app pedir confirmação de algo "diferente", confirma.
 async function salvarFormulario(p, seletor) {
@@ -135,7 +132,7 @@ async function abrirCorrecao(p, aba) {
   await p.waitForSelector(aba === 'abastecimentos' ? '#form-abast' : '#form-manut');
 }
 const doCarro = async (col, carroId) => (await listar(`familias/${fid}/${col}`)).filter(r => r.carroId === carroId);
-const textoLembretes = async (p) => { await ir(p, '#inicio'); return (await p.textContent('.tela')).replace(/\s+/g, ' '); };
+const textoLembretes = async (p, carroId) => { await ir(p, '#painel/' + carroId); return (await p.textContent('.tela')).replace(/\s+/g, ' '); };
 
 async function arquivoDeCopia(dados) {
   const caminho = join(RAIZ, 'testes', '.copia-teste-' + Math.random().toString(36).slice(2) + '.json');
@@ -175,7 +172,16 @@ await teste('cadastra o primeiro carro pelo botão "Cadastrar primeiro carro"', 
   assert.match(await p.textContent('.janela h2'), /Tudo pronto/);
   await okJanela(p);
   assert.match(await p.textContent('.topo-nome'), /Carro 1/);
+  assert.match(await p.evaluate(() => location.hash), /^#painel\//, 'depois de cadastrar, abre o painel do carro novo');
   await esperarNuvem(async () => (await listar(`familias/${fid}/veiculos`)).length === 1, '1 carro');
+});
+
+await teste('com um carro só, a Garagem abre mesmo assim e tem "Adicionar carro"', async () => {
+  await p.goto(SITE); await p.waitForSelector('.garagem');   // abrir o app pelo endereço/ícone
+  assert.equal(await p.textContent('h1'), 'Garagem');
+  assert.equal(await p.locator('.garagem .escolha-carro').count(), 1);
+  assert.ok(await p.isVisible('a:has-text("+ Adicionar carro")'));
+  assert.equal(await p.locator('#menu a.ativo').textContent(), 'Garagem');
 });
 
 await teste('cadastra vários carros (8), sem limite, e as cores podem se repetir', async () => {
@@ -186,9 +192,9 @@ await teste('cadastra vários carros (8), sem limite, e as cores podem se repeti
   assert.ok(carros.every(c => c.arquivado === false));
 });
 
-await teste('escolha do carro continua prática com muitos carros (lista compacta e busca)', async () => {
-  await ir(p, '#ajustes'); await p.click('[data-acao=trocar-carro] >> nth=0');
-  await p.waitForSelector('.escolha-carro');
+await teste('Garagem continua prática com muitos carros (lista compacta e busca)', async () => {
+  await ir(p, '#inicio');
+  await p.waitForSelector('.garagem .escolha-carro');
   assert.equal(await p.locator('.escolha-carro').count(), 8);
   assert.ok(await p.isVisible('.lista-carros.lista-compacta'));
   await p.fill('#busca-carro', 'carro 3');
@@ -196,6 +202,29 @@ await teste('escolha do carro continua prática com muitos carros (lista compact
   assert.equal(await p.locator('.escolha-carro:visible').count(), 1);
   await p.click('.escolha-carro:visible');
   await p.waitForSelector('.topo-nome:has-text("Carro 3")');
+  assert.ok(await p.isVisible('.topo-voltar:has-text("Garagem")'), 'painel tem "← Garagem"');
+});
+
+await teste('entrar de novo abre a Garagem, sem pedir para escolher carro', async () => {
+  await p.goto(SITE); await p.waitForSelector('.garagem');   // abrir o app pelo endereço/ícone
+  assert.equal(await p.textContent('h1'), 'Garagem');
+  assert.equal(await p.locator('text=Qual carro você quer ver?').count(), 0);
+});
+
+await teste('cartões da Garagem mostram nome, marca/modelo, quilometragem e próximo aviso', async () => {
+  const c5 = (await listar(`familias/${fid}/veiculos`)).find(c => c.nome === 'Carro 5');
+  await gravarDoc(`familias/${fid}/veiculos/${c5.id}`, { nome: 'Carro 5', marca: 'Marca W', modelo: 'Modelo K', ano: '2019', cor: c5.cor, oleoKm: 5000, oleoMeses: null, criadoEm: c5.criadoEm, arquivado: false, arquivadoEm: null });
+  await gravarDoc(`familias/${fid}/abastecimentos/g1`, { carroId: c5.id, data: '2026-10-01', km: 33000, litros: 30, valor: 180, tanqueCheio: true });
+  await gravarDoc(`familias/${fid}/manutencoes/g2`, { carroId: c5.id, tipo: 'oleo', data: '2026-10-01', km: 29000, valor: null });
+  await p.waitForTimeout(800);
+  await ir(p, '#inicio');
+  const cartao = (await p.textContent(`.garagem .escolha-carro:has(.nome:text-is("Carro 5"))`)).replace(/\s+/g, ' ');
+  assert.match(cartao, /Marca W Modelo K 2019/);
+  assert.match(cartao, /Quilometragem: 33\.000 km/);
+  assert.match(cartao, /Faltam 1\.000 km para a troca de óleo/);
+  // limpa para não afetar os próximos testes
+  for (const doc of ['abastecimentos/g1', 'manutencoes/g2']) await fetch(`${FS}/familias/${fid}/${doc}`, { method: 'DELETE', headers: DONO });
+  await p.waitForTimeout(500);
 });
 
 await teste('registros ficam separados por carro', async () => {
@@ -204,11 +233,21 @@ await teste('registros ficam separados por carro', async () => {
   assert.match(await p.textContent('.carro-do-registro'), /Carro 2/);
   await p.fill('#km', '10000'); await p.fill('#litros', '40'); await p.fill('#valor', '240');
   await p.click('#form-abast button[type=submit]'); await okJanela(p);
+  await p.waitForSelector('.topo-voltar');
+  assert.match(await p.evaluate(() => location.hash), /^#painel\//, 'volta ao painel do carro');
+  assert.match(await p.textContent('.topo-nome'), /Carro 2/);
   await ir(p, '#historico'); await p.click('[data-periodo=tudo]');
   assert.match(await p.textContent('.resumo-periodo'), /1 abastecimento/);
-  await escolher(p, 'Carro 3');
-  await ir(p, '#historico'); await p.click('[data-periodo=tudo]');
+  assert.match(await p.textContent('.carro-da-tela'), /Mostrando: Carro 2/);
+  // "Trocar" no Histórico: escolhe outro carro e continua no Histórico
+  await p.click('.carro-da-tela [data-acao=trocar-carro]');
+  await p.click('.opcao-carro:has-text("Carro 3")');
+  await p.waitForSelector('.carro-da-tela:has-text("Carro 3")');
+  assert.equal(await p.evaluate(() => location.hash), '#historico');
   assert.ok(await p.isVisible('text=Nenhum abastecimento registrado ainda'));
+  await ir(p, '#relatorios');
+  assert.match(await p.textContent('.carro-da-tela'), /Mostrando: Carro 3/);
+  assert.match(await p.textContent('.topo-nome'), /Carro 3/);
   await esperarNuvem(async () => (await listar(`familias/${fid}/abastecimentos`)).length === 1, '1 abastecimento');
   idAbastCarro2 = (await listar(`familias/${fid}/abastecimentos`))[0].id;
 });
@@ -221,10 +260,9 @@ await teste('arquivar um carro não apaga os registros dele', async () => {
   assert.equal((await listar(`familias/${fid}/abastecimentos`)).length, 1, 'o abastecimento continua no banco');
   assert.equal((await listar(`familias/${fid}/veiculos`)).length, 8, 'o carro não foi apagado');
   assert.ok(await p.isVisible('h2:has-text("Carros arquivados")'));
-  await p.click('[data-acao=trocar-carro] >> nth=0');
-  await p.waitForSelector('.escolha-carro');
-  assert.equal(await p.locator('.escolha-carro').count(), 7, 'arquivado some da escolha');
-  await p.click('.escolha-carro >> nth=0');
+  await ir(p, '#inicio'); await p.waitForSelector('.garagem .escolha-carro');
+  assert.equal(await p.locator('.escolha-carro').count(), 7, 'arquivado some da Garagem');
+  assert.ok(await p.isVisible('text=1 carro arquivado'));
 });
 
 await teste('"Ver histórico" do carro arquivado é somente leitura', async () => {
@@ -254,8 +292,7 @@ await teste('reativar devolve o carro à lista com os registros', async () => {
   await ir(p, '#ajustes');
   await p.click('.carro-arquivado [data-acao=reativar-carro]'); await okJanela(p);
   await esperarNuvem(async () => (await listar(`familias/${fid}/veiculos`)).every(c => c.arquivado === false), 'reativado');
-  await p.click('[data-acao=trocar-carro] >> nth=0');
-  await p.waitForSelector('.escolha-carro');
+  await ir(p, '#inicio'); await p.waitForSelector('.garagem .escolha-carro');
   assert.equal(await p.locator('.escolha-carro').count(), 8);
   await p.click('.escolha-carro:has(.nome:text-is("Carro 2"))');
   await p.waitForSelector('.topo-nome:has-text("Carro 2")');
@@ -305,7 +342,7 @@ await teste('corrigir uma manutenção mantém o ID e refaz o lembrete e a próx
   await p.click('.opcoes.tipos .opcao:has-text("Troca de óleo")');
   await p.fill('#km', '20600');
   await salvarFormulario(p, '#form-manut button[type=submit]');
-  assert.match(await textoLembretes(p), /Faltam 5\.000 km para a troca de óleo/);
+  assert.match(await textoLembretes(p, idTeste), /Faltam 5\.000 km para a troca de óleo/);
   await esperarNuvem(async () => (await doCarro('manutencoes', idTeste)).length === 1, 'troca de óleo');
   idOleo = (await doCarro('manutencoes', idTeste))[0].id;
 
@@ -314,7 +351,7 @@ await teste('corrigir uma manutenção mantém o ID e refaz o lembrete e a próx
   const t = await salvarFormulario(p, '#form-manut button[type=submit]');
   assert.match(t, /Manutenção corrigida/);
   assert.match(t, /Faltam 4\.400 km para a troca de óleo/);   // 20.000 + 5.000 - 20.600
-  assert.match(await textoLembretes(p), /Faltam 4\.400 km para a troca de óleo/);
+  assert.match(await textoLembretes(p, idTeste), /Faltam 4\.400 km para a troca de óleo/);
   await esperarNuvem(async () => (await doCarro('manutencoes', idTeste)).some(m => m.km === 20000), 'correção da manutenção');
   assert.deepEqual((await doCarro('manutencoes', idTeste)).map(m => m.id), [idOleo], 'mesmo ID');
 
@@ -324,12 +361,12 @@ await teste('corrigir uma manutenção mantém o ID e refaz o lembrete e a próx
   await p.fill('#km', '20600');
   await p.click('#bloco-lembrete summary'); await p.fill('#lembreteKm', '40000');
   await salvarFormulario(p, '#form-manut button[type=submit]');
-  assert.match(await textoLembretes(p), /Faltam 40\.000 km para a troca de pneus/);
+  assert.match(await textoLembretes(p, idTeste), /Faltam 40\.000 km para a troca de pneus/);
   await abrirCorrecao(p, 'manutencoes');                      // o mais recente é o de pneus
   assert.equal(await p.inputValue('#lembreteKm'), '40.000');
   await p.fill('#lembreteKm', '30000');
   await salvarFormulario(p, '#form-manut button[type=submit]');
-  assert.match(await textoLembretes(p), /Faltam 30\.000 km para a troca de pneus/);
+  assert.match(await textoLembretes(p, idTeste), /Faltam 30\.000 km para a troca de pneus/);
 });
 
 await teste('editar nome, marca, modelo, ano, cor e óleo do carro mantém o ID e os registros', async () => {
@@ -349,7 +386,7 @@ await teste('editar nome, marca, modelo, ano, cor e óleo do carro mantém o ID 
   assert.deepEqual([c.nome, c.marca, c.modelo, c.ano, c.cor, c.oleoKm, c.oleoMeses], ['Carro Renomeado', 'Marca Z', 'Modelo Q', '2020', '#15803d', 10000, 6]);
   assert.equal((await doCarro('abastecimentos', idTeste)).length, 2, 'abastecimentos continuam ligados ao carro');
   assert.equal((await doCarro('manutencoes', idTeste)).length, 2, 'manutenções continuam ligadas ao carro');
-  const tela = await textoLembretes(p);
+  const tela = await textoLembretes(p, idTeste);
   assert.match(await p.textContent('.topo-nome'), /Carro Renomeado/);
   assert.match(tela, /Faltam 9\.400 km para a troca de óleo/);   // 20.000 + 10.000 - 20.600
 });
@@ -431,8 +468,8 @@ await teste('família já cadastrada: abrir o app não altera nenhum carro nem r
   const antes = JSON.stringify([await listar('familias/ANTIGA/veiculos'), await listar('familias/ANTIGA/abastecimentos')]);
   const q = await novaPagina();
   await entrar(q, 'antiga@example.com', 'senha-teste-2');
-  await q.waitForSelector('.escolha-carro');
-  assert.equal(await q.locator('.escolha-carro').count(), 2, 'os dois carros antigos aparecem ativos');
+  await q.waitForSelector('.garagem .escolha-carro');
+  assert.equal(await q.locator('.escolha-carro').count(), 2, 'os dois carros antigos aparecem ativos na Garagem');
   await q.click('.escolha-carro >> nth=0');
   await ir(q, '#ajustes'); await ir(q, '#historico'); await q.waitForTimeout(1500);
   const depois = JSON.stringify([await listar('familias/ANTIGA/veiculos'), await listar('familias/ANTIGA/abastecimentos')]);
@@ -445,7 +482,8 @@ await teste('demonstração continua com os 2 carros fictícios e não grava na 
   const q = await novaPagina();
   await q.goto(SITE); await q.waitForSelector('#form-login');
   await q.click('[data-acao=demo]');
-  await q.waitForSelector('.escolha-carro');
+  await q.waitForSelector('.garagem .escolha-carro');
+  assert.equal(await q.textContent('h1'), 'Garagem');
   const nomes = await q.locator('.escolha-carro .nome').allTextContents();
   assert.deepEqual(nomes.sort(), ['Carro 1 (exemplo)', 'Carro 2 (exemplo)']);
   assert.equal((await listar('familias')).length, antes);

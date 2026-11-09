@@ -26,11 +26,15 @@ Assim ele abre com um toque, como os outros aplicativos.
 - **Android (Chrome):** toque nos **três pontinhos ⋮** no alto e depois em **Adicionar à tela inicial** (ou **Instalar app**).
 - **iPhone (Safari):** toque no botão **Compartilhar** (quadrado com seta para cima) e depois em **Adicionar à Tela de Início**.
 
-## 3. Escolher o carro
+## 3. Garagem: escolher o carro
 
-A família pode ter um ou mais carros. Se houver mais de um, ao abrir toque no carro que você quer ver. Com muitos carros, dá para procurar pelo nome.
+Ao abrir, aparece a **Garagem** com todos os carros da família. Cada cartão mostra a quilometragem e o próximo aviso de manutenção. **Toque no carro** para abrir o painel dele. Com muitos carros, dá para procurar pelo nome.
 
-👉 **O nome do carro escolhido aparece no alto da tela, com um ponto colorido.** Confira sempre antes de salvar. Para mudar, toque em **Trocar carro**.
+👉 **Dentro do carro, o nome dele aparece no alto da tela, com um ponto colorido.** Confira sempre antes de salvar. Para voltar e escolher outro carro, toque em **← Garagem** (ou no botão **Garagem** do menu).
+
+No **Histórico** e nos **Relatórios**, a linha **"Mostrando: …"** diz de qual carro são os números. Toque em **Trocar** para ver outro carro sem sair da tela.
+
+Para cadastrar outro carro, toque em **+ Adicionar carro**, no fim da Garagem.
 
 ## 4. Anotar um abastecimento
 
@@ -52,7 +56,7 @@ O aplicativo mostra quanto o carro andou, o consumo e o preço do litro.
 
 ## 6. Avisos
 
-Na tela inicial aparecem avisos:
+No painel de cada carro e nos cartões da Garagem aparecem avisos:
 - 🟡 **Chegando:** está quase na hora (ex.: “Faltam 500 km para a troca de óleo”).
 - 🔴 **Atrasada:** já passou da hora.
 
@@ -72,7 +76,7 @@ Pode anotar normalmente. Aparece um aviso marrom “Sem internet”, e os regist
 Na tela de entrada, digite seu e-mail e toque em **Esqueci minha senha**. Chega um e-mail com um link para criar a senha que você quiser. (Quem entra com Google não tem senha do aplicativo: usa a do Gmail.)
 
 **Como cadastro outro carro?**
-Toque em **Ajustes** e depois em **Adicionar carro**.
+Na **Garagem**, toque em **+ Adicionar carro**. (Também dá em **Ajustes → Adicionar carro**.)
 
 **A família não usa mais um carro. Perco o histórico?**
 Não. Em **Ajustes**, toque no carro e depois em **Arquivar este carro**. Ele sai da lista, mas os abastecimentos e manutenções ficam guardados. Em **Ajustes → Carros arquivados** dá para **Ver histórico** ou **Reativar**.
