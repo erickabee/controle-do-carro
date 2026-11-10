@@ -1,6 +1,6 @@
 {
-  "name": "Controle do Carro",
-  "short_name": "Meu Carro",
+  "name": "Controle de Bordo",
+  "short_name": "Controle de Bordo",
   "description": "Anote abastecimentos e manutenções do carro.",
   "lang": "pt-BR",
   "start_url": "./index.html",
@@ -9,8 +9,23 @@
   "background_color": "#f5f6f7",
   "theme_color": "#f5f6f7",
   "icons": [
-    { "src": "icone.svg", "sizes": "any", "type": "image/svg+xml" },
-    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "icone-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icone-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

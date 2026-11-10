@@ -1,4 +1,4 @@
-# 🚗 Controle do Carro
+# Controle de Bordo
 
 Aplicativo para a minha família anotar os abastecimentos e as manutenções de um ou mais carros. Foi feito pensando nos meus pais, que não têm muita familiaridade com tecnologia: botões grandes, poucos campos, tudo em português do Brasil, e os mesmos dados no celular de cada um.
 

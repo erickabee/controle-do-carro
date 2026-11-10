@@ -1,4 +1,4 @@
-# 📱 Como usar o Controle do Carro no celular
+# 📱 Como usar o Controle de Bordo no celular
 
 Guia simples para quem vai anotar os abastecimentos e as manutenções.
 

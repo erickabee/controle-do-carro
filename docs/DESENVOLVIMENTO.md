@@ -1,6 +1,6 @@
 # Desenvolvimento e testes
 
-Como rodar o Controle do Carro no computador, executar os testes e entender a organização do código.
+Como rodar o Controle de Bordo no computador, executar os testes e entender a organização do código.
 
 > Voltar para o [README](../README.md) · Configurar o Firebase e publicar: [CONFIGURAR-FIREBASE.md](CONFIGURAR-FIREBASE.md) · Guia de uso no celular: [COMO-USAR.md](../COMO-USAR.md)
 

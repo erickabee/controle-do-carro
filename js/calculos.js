@@ -1,5 +1,5 @@
 /*
- * Cálculos do Controle do Carro.
+ * Cálculos do Controle de Bordo.
  * Funções puras (sem tela), usadas pelo app e pelos testes (node testes/calculos.test.js).
  * As fórmulas estão documentadas em README.md, seção "Como os cálculos são feitos".
  */

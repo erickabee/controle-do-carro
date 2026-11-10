@@ -1,5 +1,5 @@
 /*
- * Controle do Carro — telas e armazenamento.
+ * Controle de Bordo — telas e armazenamento.
  * Os dados ficam no Cloud Firestore (nuvem da família); veja js/nuvem.js e firestore.rules.
  */
 (function () {
@@ -23,7 +23,7 @@
   function tom(cor) { var c = String(cor || '').toLowerCase(); return TONS[c] || (/^#[0-9a-f]{6}$/.test(c) ? c : TONS['#1e40af']); }
   function marca(tipo) { return '<div class="marca marca-' + tipo + '" aria-hidden="true"></div>'; }
 
-  // Ícones próprios do app (traço único, cantos arredondados), desenhados para o Controle do Carro.
+  // Ícones próprios do app (traço único, cantos arredondados), desenhados para o Controle de Bordo.
   function svg(corpo, extra) {
     return '<svg class="icone' + (extra ? ' ' + extra : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + corpo + '</svg>';
   }
@@ -1880,7 +1880,7 @@
         var bruto;
         try { bruto = JSON.parse(leitor.result); } catch (e) { bruto = null; }
         var d = lerCopia(bruto);
-        if (!d) { aviso('Arquivo não reconhecido', 'Este arquivo não é uma cópia de segurança do Controle do Carro.'); return; }
+        if (!d) { aviso('Arquivo não reconhecido', 'Este arquivo não é uma cópia de segurança do Controle de Bordo.'); return; }
         if (d.demo) { aviso('Cópia de demonstração', 'Este arquivo contém só os dados de exemplo da demonstração. Nada foi importado.'); return; }
         var resumo = 'Cópia de ' + (d.criadoEm ? C.fmtData(String(d.criadoEm).slice(0, 10)) : 'data desconhecida') + ' com ' +
           C.plural(d.carros.length, 'carro', 'carros') + ', ' + C.plural(d.abastecimentos.length, 'abastecimento', 'abastecimentos') +
@@ -2003,7 +2003,7 @@
   }
 
   function telaSemConfig() {
-    tela.innerHTML = '<h1>Controle do Carro</h1>' +
+    tela.innerHTML = '<h1>Controle de Bordo</h1>' +
       '<div class="caixa caixa-aviso"><strong>Falta configurar o Firebase</strong>' +
       '<p style="margin-top:6px">Este endereço ainda não tem o arquivo <code>firebase-config.js</code> com a configuração do projeto. ' +
       'Quem cuida do aplicativo deve seguir o passo a passo do README.</p></div>' +
@@ -2012,7 +2012,7 @@
   }
 
   function telaErroCarga() {
-    tela.innerHTML = '<h1>Controle do Carro</h1>' +
+    tela.innerHTML = '<h1>Controle de Bordo</h1>' +
       '<div class="caixa caixa-erro"><strong>Não foi possível carregar</strong><p style="margin-top:6px">' +
       (navigator.onLine === false ? 'Parece que o celular está sem internet. ' : '') +
       'Confira a conexão e tente de novo.</p>' + (erroCarga ? '<p class="legenda-simples">' + mensagemErro(erroCarga) + '</p>' : '') + '</div>' +

@@ -1,4 +1,4 @@
-# Configurar o Firebase e publicar o Controle do Carro
+# Configurar o Firebase e publicar o Controle de Bordo
 
 Guia completo para colocar o app no ar: criar o projeto Firebase, cadastrar as pessoas da família, configurar o app e publicar no Firebase Hosting (`controlecarro.web.app`).
 
@@ -14,7 +14,7 @@ Leva uns 20 minutos. Tudo é gratuito no plano **Spark**, que é mais do que suf
 
 ## 2. Registrar o aplicativo Web
 1. Na página inicial do projeto, clique no ícone **Web** (`</>`).
-2. Apelido: `Controle do Carro`. **Não** marque “Firebase Hosting”.
+2. Apelido: `Controle de Bordo`. **Não** marque “Firebase Hosting”.
 3. Ele mostra um trecho `const firebaseConfig = { apiKey: ..., ... }`. **Guarde esse trecho**: ele será usado nos passos 10 e 11. Se perder, ele fica em ⚙️ **Configurações do projeto → Geral → Seus apps**.
 
 ## 3. Ativar o login

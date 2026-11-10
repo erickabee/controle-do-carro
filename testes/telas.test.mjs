@@ -1,4 +1,4 @@
-// Testes de tela do Controle do Carro (navegador real + emuladores do Firebase).
+// Testes de tela do Controle de Bordo (navegador real + emuladores do Firebase).
 // Nada aqui toca o projeto Firebase real.
 //   npm install
 //   npx playwright install chromium

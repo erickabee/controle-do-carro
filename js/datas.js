@@ -1,5 +1,5 @@
 /*
- * Campo de data do Controle do Carro, em português e no formato brasileiro (dd/mm/aaaa).
+ * Campo de data do Controle de Bordo, em português e no formato brasileiro (dd/mm/aaaa).
  *
  * - A pessoa pode DIGITAR a data (as barras entram sozinhas: "05112026" vira 05/11/2026)
  *   ou tocar no botão do calendário.
