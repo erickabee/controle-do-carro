@@ -59,12 +59,57 @@
       '<span class="sigla' + (m.sigla.length > 4 ? ' sigla-longa' : '') + (m.sigla.length > 6 ? ' sigla-muito-longa' : '') + '">' + esc(m.sigla) + '</span></span>';
   }
   // Quilometragem com cara de odômetro: cada algarismo numa casinha.
-  function odometro(km) {
-    var t = C.fmtNum(km);
-    return '<span class="odometro">' + t.split('').map(function (ch) {
-      return /\d/.test(ch) ? '<span class="dig">' + ch + '</span>' : '<span class="sep">' + ch + '</span>';
-    }).join('') + '<span class="un"> km</span></span>';
+  // Quando a quilometragem de um carro MUDA (ex.: depois de um registro), os algarismos que
+  // mudaram rolam do valor antigo até o novo, em menos de 1 segundo. Ao abrir o app não há
+  // animação (não há valor anterior), e com "reduzir movimento" o número aparece direto.
+  // O valor final já está no texto desde o início (para leitores de tela e para o app).
+  var DURACAO_ROLAGEM = 800;
+  var kmMostrado = {};   // última quilometragem mostrada de cada carro, nesta sessão
+  var rolagens = {};     // carroId -> { de, para, inicio }
+  var menosMovimento = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  var anuncio = document.getElementById('anuncio');
+  function lembrarKm(carroId, km) { if (carroId && typeof km === 'number') kmMostrado[carroId] = km; }
+  function esquecerKms() { kmMostrado = {}; rolagens = {}; }
+  function fitaDeDigitos(de, para, sobe) {
+    if (de === '') return ['\u00a0', para];          // algarismo novo à esquerda (ex.: 9.999 → 10.000)
+    var lista = [de], d = +de, alvo = +para;
+    while (d !== alvo) { d = (d + (sobe ? 1 : 9)) % 10; lista.push(String(d)); }
+    return lista;
   }
+  function odometro(km, carroId) {
+    var anim = null;
+    if (carroId) {
+      var antes = kmMostrado[carroId];
+      if (typeof antes === 'number' && antes !== km && !(menosMovimento && menosMovimento.matches)) {
+        rolagens[carroId] = { de: antes, para: km, inicio: Date.now() };
+        if (anuncio) setTimeout(function () { anuncio.textContent = 'Quilometragem atualizada: ' + C.fmtKm(km); }, 150);
+      }
+      lembrarKm(carroId, km);
+      var r = rolagens[carroId];
+      // redesenho durante a animação: continua de onde estava (atraso negativo)
+      if (r && r.para === km && Date.now() - r.inicio < DURACAO_ROLAGEM) anim = r;
+    }
+    var novo = C.fmtNum(km).split(''), velho = anim ? C.fmtNum(anim.de).split('') : null;
+    var desloc = velho ? novo.length - velho.length : 0;
+    var visual = novo.map(function (ch, i) {
+      if (!/\d/.test(ch)) return '<span class="sep">' + ch + '</span>';
+      var antigo = velho ? (velho[i - desloc] !== undefined && /\d/.test(velho[i - desloc]) ? velho[i - desloc] : '') : ch;
+      if (!anim || antigo === ch) return '<span class="dig">' + ch + '</span>';
+      var fita = fitaDeDigitos(antigo, ch, anim.para > anim.de);
+      return '<span class="dig rola" data-fim="' + ch + '"><span class="fita" style="--passos:' + (fita.length - 1) +
+        ';animation-delay:-' + (Date.now() - anim.inicio) + 'ms">' + fita.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</span></span>';
+    }).join('');
+    return '<span class="odometro' + (anim ? ' rolando' : '') + '"><span class="sr">' + C.fmtKm(km) + '</span>' +
+      '<span class="odo-visual" aria-hidden="true">' + visual + '<span class="un"> km</span></span></span>';
+  }
+  // Fim da rolagem: troca a fita pelo algarismo final.
+  document.addEventListener('animationend', function (ev) {
+    if (!ev.target.classList || !ev.target.classList.contains('fita')) return;
+    var dig = ev.target.parentNode;
+    dig.classList.remove('rola'); dig.textContent = dig.getAttribute('data-fim');
+    var odo = dig.closest('.odometro');
+    if (odo && !odo.querySelector('.fita')) odo.classList.remove('rolando');
+  });
   var COMBUSTIVEIS = ['Gasolina', 'Etanol', 'Diesel', 'GNV'];
   var TIPOS_ORDEM = ['oleo', 'pneus', 'revisao', 'freios', 'bateria', 'alinhamento', 'outro'];
 
@@ -144,7 +189,7 @@
     var esquema = document.querySelector('meta[name=color-scheme]');
     if (esquema) esquema.setAttribute('content', aparencia.tema === 'auto' ? 'light dark' : (aparencia.tema === 'escuro' ? 'dark' : 'light'));
     var cor = document.querySelector('meta[name=theme-color]');
-    if (cor) cor.setAttribute('content', temaEfetivo() === 'escuro' ? '#0c1413' : '#f3f6f5');
+    if (cor) cor.setAttribute('content', temaEfetivo() === 'escuro' ? '#1d2024' : '#f5f6f7');
   }
   if (escuroNoCelular && escuroNoCelular.addEventListener) escuroNoCelular.addEventListener('change', aplicarAparencia);
   function guardarAparenciaNoAparelho() {
@@ -489,6 +534,7 @@
       arquivo: telaArquivo
     };
     (telas[nome] || telaGaragem)(r.param);
+    if (window.CampoData) CampoData.ligar(tela);
     if (formulario && formulario.hash === (location.hash || '#inicio')) formulario.inicial = $('.tela form') ? estadoDosCampos() : null;
     if (manterRolagem !== true) window.scrollTo(0, 0);
   }
@@ -650,7 +696,7 @@
         (desc ? '<span class="sub descricao">' + esc(desc) + '</span>' : '') + '</span>' +
         '<span class="abrir">' + ICONES.seta + '<span class="sr">Abrir painel</span></span></span>' +
         '<span class="km-carro"><span class="sobretitulo">Quilometragem</span>' +
-        (r.km !== null ? (compacta ? '<strong class="km-texto">' + C.fmtKm(r.km) + '</strong>' : odometro(r.km)) : '<span class="sem-registro">Nenhum registro ainda</span>') + '</span>' +
+        (r.km !== null ? (compacta ? (lembrarKm(c.id, r.km), '<strong class="km-texto">' + C.fmtKm(r.km) + '</strong>') : odometro(r.km, c.id)) : '<span class="sem-registro">Nenhum registro ainda</span>') + '</span>' +
         (aviso ? '<span class="alerta alerta-' + aviso.situacao + '">' + esc(aviso.mensagem) + '</span>' : '') +
         '</a>';
     });
@@ -707,7 +753,7 @@
     // Quadro de instrumentos: quilometragem (odômetro) e consumo recente.
     h += '<section class="quadro" aria-label="Números do carro" style="--tom:' + tom(carro.cor) + '">' +
       '<div class="quadro-item"><span class="info-rotulo">Quilometragem atual</span>' +
-      (r.km !== null ? '<span class="info-valor">' + odometro(r.km) + '</span><span class="info-extra">Último número anotado</span>'
+      (r.km !== null ? '<span class="info-valor">' + odometro(r.km, carro.id) + '</span><span class="info-extra">Último número anotado</span>'
         : '<span class="info-valor">—</span><span class="info-extra">Aparece depois do primeiro registro.</span>') + '</div>' +
       '<div class="quadro-item"><span class="info-rotulo">Consumo recente</span>' +
       (r.recente ? '<span class="info-valor">' + C.fmtNum(r.recente.kmPorLitro, 1) + ' <small>km/L</small></span>' +
@@ -788,7 +834,7 @@
     h += cabecalhoCarroRegistro(carro, reg ? 'Abastecimento do carro:' : 'Este abastecimento será salvo no carro:');
     h += '<form id="form-abast" novalidate><div id="erros"></div>';
 
-    h += '<div class="campo"><label for="data">Data</label><input type="date" id="data" max="' + hoje + '" value="' + esc(reg ? reg.data : hoje) + '"></div>';
+    h += CampoData.html({ id: 'data', rotulo: 'Data', valor: reg ? reg.data : hoje, max: hoje });
 
     h += campoNumero('km', 'Quilometragem no painel', reg ? textoNumero(reg.km) : '', 'km',
       'É o número total que aparece no painel (hodômetro). Exemplo: 45.230' +
@@ -986,7 +1032,7 @@
     h += '<div class="campo" id="campo-descricao" hidden><label for="descricao">Qual manutenção?</label>' +
       '<input type="text" id="descricao" maxlength="60" value="' + esc(reg ? reg.descricao : '') + '" placeholder="Ex.: troca do filtro de ar"></div>';
 
-    h += '<div class="campo"><label for="data">Data</label><input type="date" id="data" max="' + hoje + '" value="' + esc(reg ? reg.data : hoje) + '"></div>';
+    h += CampoData.html({ id: 'data', rotulo: 'Data', valor: reg ? reg.data : hoje, max: hoje });
 
     h += campoNumero('km', 'Quilometragem no painel naquele dia', reg ? textoNumero(reg.km) : '', 'km',
       'Exemplo: 45.230', { inteiro: true, placeholder: 'Ex.: 45.230' });
@@ -1001,8 +1047,8 @@
       '<p class="dica" id="dica-lembrete">Preencha um dos dois, ou os dois. Será avisado o que vier primeiro.</p>' +
       campoNumero('lembreteKm', 'Avisar daqui a quantos km?', reg && reg.lembreteKm ? textoNumero(reg.lembreteKm) : '', 'km',
         '<span id="dica-lembrete-km">Exemplo: 10.000</span>', { inteiro: true, opcional: true }) +
-      '<div class="campo"><label for="lembreteData">Ou avisar em qual data? <span class="opcional">(opcional)</span></label>' +
-      '<input type="date" id="lembreteData" min="' + hoje + '" value="' + esc(reg && reg.lembreteData ? reg.lembreteData : '') + '"></div>' +
+      CampoData.html({ id: 'lembreteData', rotulo: 'Ou avisar em qual data?', opcional: true, min: hoje, valor: reg && reg.lembreteData ? reg.lembreteData : '',
+        dica: 'Digite como 05/11/2027 ou toque no calendário.' }) +
       '</details></div>';
 
     h += campoNumero('valorManut', 'Quanto custou', reg && reg.valor ? textoNumero(reg.valor, 2) : '', 'R$', 'Exemplo: 180,00', { prefixo: true, opcional: true, placeholder: '0,00' });
@@ -1175,8 +1221,8 @@
       '<button type="button" data-aba="manutencoes" aria-pressed="' + (sessao.abaHistorico === 'manutencoes') + '">Manutenções</button></div>';
     h += botoesFiltro([['30', 'Últimos 30 dias'], ['90', '3 meses'], ['365', '12 meses'], ['tudo', 'Tudo'], ['datas', 'Escolher datas']], sessao.periodoHistorico, 'periodo');
     if (sessao.periodoHistorico === 'datas') {
-      h += '<div class="datas-filtro"><div><label for="de">De</label><input type="date" id="de" value="' + esc(sessao.deHistorico) + '"></div>' +
-        '<div><label for="ate">Até</label><input type="date" id="ate" value="' + esc(sessao.ateHistorico) + '"></div></div>';
+      h += '<div class="datas-filtro">' + CampoData.html({ id: 'de', rotulo: 'De', valor: sessao.deHistorico, dica: 'dd/mm/aaaa' }) +
+        CampoData.html({ id: 'ate', rotulo: 'Até', valor: sessao.ateHistorico, dica: 'dd/mm/aaaa' }) + '</div>';
     }
 
     if (sessao.abaHistorico === 'abastecimentos') {
@@ -1890,6 +1936,7 @@
   // =====================================================================
   function carregarDemo() {
     if (window.Nuvem && nuvemPronta) { Nuvem.pararDeOuvir(); Nuvem.pararPerfil(); }
+    esquecerKms();
     var d = window.DadosDemo.gerar(C, novoId);
     estado = estadoVazio();
     estado.carros = d.carros; estado.abastecimentos = d.abastecimentos; estado.manutencoes = d.manutencoes;
@@ -1983,7 +2030,7 @@
       '<p class="entrada-frase">Cada abastecimento anotado.<br>Cada manutenção no prazo.</p>' +
       '<svg class="entrada-ilustracao" viewBox="0 0 320 190" fill="none" stroke-linecap="round" stroke-linejoin="round">' +
       '<path d="M40 160a120 120 0 0 1 240 0" stroke="currentColor" stroke-opacity=".22" stroke-width="14"/>' +
-      '<path d="M40 160a120 120 0 0 1 178-105" stroke="var(--farol)" stroke-width="14"/>' +
+      '<path d="M40 160a120 120 0 0 1 178-105" stroke="var(--acento)" stroke-width="14"/>' +
       '<g stroke="currentColor" stroke-opacity=".5" stroke-width="3"><path d="M60 160h12M248 160h12M160 60v12M89 89l9 9M231 89l-9 9"/></g>' +
       '<path d="M160 160 214 104" stroke="currentColor" stroke-width="6"/><circle cx="160" cy="160" r="12" fill="currentColor"/>' +
       '<rect x="112" y="172" width="96" height="16" rx="5" fill="currentColor" fill-opacity=".14"/></svg>' +
@@ -2192,7 +2239,7 @@
   }
 
   function comecarAOuvir() {
-    estado = estadoVazio(); carregado = {}; assinaturas = {}; pendentes = {};
+    estado = estadoVazio(); carregado = {}; assinaturas = {}; pendentes = {}; esquecerKms();
     modo = 'carregando-dados'; desenhar();
     Nuvem.ouvir(familia.id, aoReceber, function (e) {
       if (modo === 'demo') return;

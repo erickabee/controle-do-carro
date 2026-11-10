@@ -44,7 +44,7 @@ Cada pessoa entra com a conta Google ou com e-mail e senha. Só entram os e-mail
 
 **Acesso negado por padrão.** As regras do Firestore ([`firestore.rules`](firestore.rules)) só liberam quem fez login, confirmou o e-mail e está na lista de e-mails da família, e conferem o formato dos dados gravados. Elas têm testes automáticos no emulador.
 
-**Visual de painel de bordo, sem logotipos de terceiros.** Odômetro, quadro de instrumentos e luzes de aviso inspiram a identidade. A marca de cada carro aparece num selo próprio, com a sigla (VW, FIAT…), em vez de logotipos registrados. Ícones e ilustração foram desenhados para o app e tudo funciona sem internet.
+**Visual de painel de bordo, sem logotipos de terceiros.** Odômetro (que rola até o valor novo depois de um registro), quadro de instrumentos e luzes de aviso inspiram a identidade, sobre superfícies neutras e um destaque em ardósia. As datas são digitadas em `dd/mm/aaaa` ou escolhidas num calendário próprio, em português. A marca de cada carro aparece num selo próprio, com a sigla (VW, FIAT…), em vez de logotipos registrados. Ícones e ilustração foram desenhados para o app e tudo funciona sem internet.
 
 **Preferências separadas dos dados.** Tema e tamanho do texto ficam num perfil de cada pessoa, que só ela lê e grava. Esse perfil não dá acesso a nenhuma família.
 

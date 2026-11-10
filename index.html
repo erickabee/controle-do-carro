@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f3f6f5">
+  <meta name="theme-color" content="#f5f6f7">
   <meta name="color-scheme" content="light">
   <title>Controle do Carro</title>
   <link rel="manifest" href="manifest.webmanifest">
@@ -35,11 +35,13 @@
     <a href="#ajustes" data-rota="ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7.5h9M17 7.5h3M4 16.5h3M11 16.5h9"/><circle cx="15" cy="7.5" r="2"/><circle cx="9" cy="16.5" r="2"/></svg>Ajustes</a>
   </nav>
   <div id="janela" class="janela-fundo" hidden></div>
+  <div id="anuncio" class="sr" aria-live="polite"></div>
   <noscript><p style="padding:20px;font-size:20px">Este aplicativo precisa de JavaScript ativado no navegador.</p></noscript>
   <!-- Configuração do Firebase: arquivo pessoal, fora do Git (veja firebase-config.example.js) -->
   <script src="firebase-config.js" onerror="window.FIREBASE_CONFIG = null"></script>
   <script src="js/calculos.js"></script>
   <script src="js/marcas.js"></script>
+  <script src="js/datas.js"></script>
   <script src="js/demo.js"></script>
   <script src="js/nuvem.js"></script>
   <script src="js/app.js"></script>

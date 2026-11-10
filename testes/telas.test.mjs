@@ -624,7 +624,7 @@ await teste('Aparência: tema e tamanho do texto mudam na hora e vão para o per
   assert.equal(await ap.getAttribute('html', 'data-tema'), 'escuro');
   assert.equal(await ap.getAttribute('html', 'data-texto'), 'enorme');
   assert.ok(await ap.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize)) > tamanho * 1.2, 'o texto ficou maior');
-  assert.equal(await ap.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(12, 20, 19)', 'fundo escuro');
+  assert.equal(await ap.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(29, 32, 36)', 'fundo grafite');
   await esperarNuvem(async () => { const p = (await perfisNaNuvem()).find(x => x.id === UID_AP); return p && p.tema === 'escuro' && p.texto === 'enorme'; }, 'perfil gravado');
   const perfil = (await perfisNaNuvem()).find(x => x.id === UID_AP);
   assert.deepEqual(Object.keys(perfil).filter(k => !['id', 'atualizado'].includes(k)).sort(), ['atualizadoEm', 'tema', 'texto'], 'só as preferências, nada dos carros');
@@ -674,6 +674,107 @@ await teste('demonstração: aparência fica só no aparelho e nunca vai para a 
   assert.equal(JSON.stringify(await perfisNaNuvem()), antes, 'nenhum perfil criado ou alterado');
   assert.deepEqual(q.errosJs, []);
   await q.context().close();
+});
+
+// ---------- Campo de data e odômetro ----------
+const isoLocal = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const HOJE = isoLocal(new Date());
+const brasil = (v) => v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4);
+
+await teste('campo de data: mostra dd/mm/aaaa, aceita digitar e guarda no formato de sempre', async () => {
+  await ir(ap, '#painel/vw'); await ap.click('a:has-text("Registrar abastecimento")'); await ap.waitForSelector('#form-abast');
+  assert.equal(await ap.inputValue('#data-texto'), brasil(HOJE), 'começa com hoje, em português');
+  assert.equal(await ap.inputValue('#data'), HOJE, 'o valor guardado continua aaaa-mm-dd');
+  assert.equal(await ap.locator('input[type=date]').count(), 0, 'sem o controle padrão do navegador');
+  assert.equal(await ap.getAttribute('label[for="data-texto"]', 'for'), 'data-texto', 'rótulo ligado ao campo digitável');
+  await ap.fill('#data-texto', ''); await ap.type('#data-texto', '01102026');
+  assert.equal(await ap.inputValue('#data-texto'), '01/10/2026', 'barras entram sozinhas');
+  assert.equal(await ap.inputValue('#data'), '2026-10-01');
+  await ap.fill('#data-texto', '31/02/2026'); await ap.press('#data-texto', 'Tab');
+  assert.match(await ap.textContent('#data-ajuda'), /não existe/);
+  assert.equal(await ap.inputValue('#data'), '', 'data impossível não é guardada');
+});
+
+await teste('calendário: teclado, troca de mês, "Hoje", datas futuras bloqueadas e Esc', async () => {
+  await ap.fill('#data-texto', '15/10/2026');
+  await ap.click('.campo-data:has(#data) .data-abrir');
+  assert.equal(await ap.getAttribute('.campo-data:has(#data) .data-abrir', 'aria-expanded'), 'true');
+  assert.equal(await ap.evaluate(() => document.activeElement.getAttribute('data-dia')), '2026-10-15', 'foco no dia escolhido');
+  assert.equal(await ap.getAttribute('[data-dia="2026-10-15"]', 'aria-label'), '15 de outubro de 2026');
+  await ap.keyboard.press('ArrowLeft');
+  assert.equal(await ap.evaluate(() => document.activeElement.getAttribute('data-dia')), '2026-10-14');
+  await ap.keyboard.press('ArrowDown');
+  assert.equal(await ap.evaluate(() => document.activeElement.getAttribute('data-dia')), '2026-10-21');
+  await ap.keyboard.press('PageUp');
+  assert.match(await ap.textContent('.cal-titulo'), /setembro de 2026/);
+  await ap.keyboard.press('Enter');
+  assert.equal(await ap.inputValue('#data'), '2026-09-21');
+  assert.equal(await ap.inputValue('#data-texto'), '21/09/2026');
+  assert.ok(await ap.isHidden('#data-cal'), 'fecha depois de escolher');
+  assert.ok(await ap.evaluate(() => document.activeElement.classList.contains('data-abrir')), 'foco volta ao botão');
+  await ap.click('.campo-data:has(#data) .data-abrir');
+  await ap.click('#data-cal [data-cal=prox]');
+  assert.match(await ap.textContent('.cal-titulo'), /outubro de 2026/);
+  await ap.click('#data-cal [data-cal=hoje]');
+  assert.equal(await ap.inputValue('#data'), HOJE, '"Hoje" escolhe a data de hoje');
+  await ap.click('.campo-data:has(#data) .data-abrir');
+  const amanha = new Date(); amanha.setDate(amanha.getDate() + 1);
+  const botaoAmanha = ap.locator(`#data-cal [data-dia="${isoLocal(amanha)}"]`);
+  if (await botaoAmanha.count()) assert.ok(await botaoAmanha.isDisabled(), 'abastecimento não pode ser no futuro');
+  else assert.ok(await ap.isDisabled('#data-cal [data-cal=prox]'), 'não avança para meses futuros');
+  await ap.keyboard.press('Escape');
+  assert.ok(await ap.isHidden('#data-cal'));
+});
+
+await teste('odômetro: não rola ao abrir o app; rola só quando a quilometragem muda e termina no valor certo', async () => {
+  await ap.goto(SITE + '?abrir=1#painel/vw'); await ap.waitForSelector('.quadro');
+  assert.equal(await ap.locator('.odometro.rolando').count(), 0, 'abrir o app não anima');
+  assert.match(await ap.textContent('.quadro .odometro .sr'), /^12\.000 km$/);
+  await ap.click('a:has-text("Registrar abastecimento")'); await ap.waitForSelector('#form-abast');
+  await ap.fill('#km', '12400'); await ap.fill('#litros', '30'); await ap.fill('#valor', '180');
+  await salvarFormulario(ap, '#form-abast button[type=submit]');
+  await ap.waitForSelector('.quadro');
+  assert.equal(await ap.locator('.quadro .odometro.rolando').count(), 1, 'a quilometragem nova rola');
+  assert.ok(await ap.locator('.quadro .fita').count() > 0);
+  assert.equal(await ap.textContent('.quadro .odometro .sr'), '12.400 km', 'o valor final já está no texto');
+  assert.equal(await ap.getAttribute('.quadro .odo-visual', 'aria-hidden'), 'true', 'leitor de tela não lê os números rolando');
+  await ap.waitForFunction(() => /12\.400 km/.test(document.getElementById('anuncio').textContent), null, { timeout: 3000 });
+  await ap.waitForTimeout(1100);
+  assert.equal(await ap.locator('.quadro .fita').count(), 0, 'a rolagem termina em menos de 1 segundo');
+  assert.equal((await ap.textContent('.quadro .odo-visual')).replace(/\s+/g, ' '), '12.400 km');
+  await ir(ap, '#inicio'); await ap.waitForSelector('.garagem');
+  assert.equal(await ap.locator('.odometro.rolando').count(), 0, 'na Garagem o número já é o novo, sem rolar de novo');
+  await esperarNuvem(async () => (await listar('familias/AP/abastecimentos')).some(a => a.km === 12400 && a.data === HOJE), 'abastecimento com a data de hoje');
+});
+
+await teste('odômetro com "reduzir movimento": o número muda direto, sem rolar', async () => {
+  const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+  const q = await ctx.newPage(); q.errosJs = []; q.on('pageerror', e => q.errosJs.push(e.message));
+  await entrar(q, 'aparencia@example.com', 'senha-teste-3');
+  await q.waitForSelector('.garagem');
+  await ir(q, '#painel/vw'); await q.waitForSelector('.quadro');
+  await q.click('a:has-text("Registrar abastecimento")'); await q.waitForSelector('#form-abast');
+  await q.fill('#km', '12800'); await q.fill('#litros', '30'); await q.fill('#valor', '180');
+  await salvarFormulario(q, '#form-abast button[type=submit]');
+  await q.waitForSelector('.quadro');
+  assert.equal(await q.locator('.fita').count(), 0);
+  assert.equal(await q.locator('.odometro.rolando').count(), 0);
+  assert.equal((await q.textContent('.quadro .odo-visual')).replace(/\s+/g, ' '), '12.800 km');
+  assert.deepEqual(q.errosJs, []);
+  await ctx.close();
+});
+
+await teste('Histórico "Escolher datas": digitar a data filtra como antes', async () => {
+  await ir(ap, '#painel/vw'); await ap.waitForSelector('.quadro');
+  await ir(ap, '#historico'); await ap.click('[data-aba=abastecimentos]'); await ap.click('[data-periodo=datas]');
+  await ap.waitForSelector('#de-texto');
+  await ap.type('#de-texto', '02102026');
+  await ap.waitForSelector('.resumo-periodo');
+  assert.equal(await ap.inputValue('#de-texto'), '02/10/2026', 'a data fica no campo depois de filtrar');
+  assert.match(await ap.textContent('.resumo-periodo'), /2 abastecimentos/, 'o de 01/10/2026 fica de fora');
+  await ap.fill('#de-texto', ''); await ap.type('#de-texto', '01102026');
+  await ap.waitForFunction(() => /3 abastecimentos/.test(document.querySelector('.resumo-periodo').textContent));
+  await ap.click('[data-periodo=tudo]');
 });
 
 await teste('nenhum erro de JavaScript nas telas novas', async () => assert.deepEqual(ap.errosJs, []));

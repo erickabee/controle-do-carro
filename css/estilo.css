@@ -1,45 +1,42 @@
 /*
- * Controle do Carro — identidade "Painel de bordo"
+ * Controle do Carro — identidade "Painel de bordo", paleta "Grafite e ardósia"
  * A linguagem visual vem do painel de instrumentos do carro: odômetro com algarismos
- * em casinhas, luzes de aviso (verde, âmbar, vermelho) e um quadro de instrumentos
- * em verde-petróleo. Fundo claro e arejado, verde-azulado como cor de ação,
- * e a cor de cada carro como fio condutor.
+ * em casinhas e luzes de aviso (verde, âmbar, vermelho). Superfícies neutras (claras,
+ * ou grafite no modo escuro); a cor de destaque, uma ardósia pouco saturada, aparece
+ * só na ação principal, na navegação e na seleção. A cor de cada carro fica nos detalhes.
  *
  * Tema: <html data-tema="claro|escuro|auto">  (auto segue o celular)
  * Texto: <html data-texto="padrao|maior|enorme">  (tudo é medido em rem e acompanha)
  * Contrastes conferidos (AA) nos dois temas — veja docs/DESENVOLVIMENTO.md.
  */
 :root {
-  --fundo: #f3f6f5;
+  --fundo: #f5f6f7;
   --superficie: #ffffff;
-  --superficie-2: #e9efed;      /* trilhos, abas, áreas rebaixadas */
-  --superficie-3: #f7faf9;      /* destaque leve dentro de painéis */
-  --tinta: #13201f;
-  --tinta-2: #3c4a49;
-  --tinta-3: #546261;
-  --linha: #dbe3e1;
-  --linha-forte: #7d8b89;       /* bordas de campos (3:1) */
-  --acento: #0f766e;
-  --acento-forte: #0b5f58;
-  --acento-suave: #def1ec;
-  --acento-texto: #0b5f58;
-  --botao-fundo: #0f766e;
-  --botao-fundo-hover: #0b5f58;
+  --superficie-2: #eceef1;      /* trilhos, abas, áreas rebaixadas */
+  --superficie-3: #f8f9fa;      /* destaque leve dentro de painéis */
+  --tinta: #1b1e23;
+  --tinta-2: #454b53;
+  --tinta-3: #5d646d;
+  --linha: #e2e5e9;
+  --linha-forte: #868d96;       /* bordas de campos (3:1) */
+  --acento: #545d88;            /* ardósia: ação principal, navegação, seleção */
+  --acento-forte: #454e7c;
+  --acento-suave: #eef0f7;
+  --acento-texto: #454e7c;
+  --botao-fundo: #545d88;
+  --botao-fundo-hover: #454e7c;
   --botao-texto: #ffffff;
-  --petroleo: #0d3b39;          /* superfícies de marca: quadro de instrumentos, entrada */
-  --petroleo-2: #134b48;
-  --sobre-petroleo: #eef8f5;
-  --sobre-petroleo-2: #b7d9d2;
-  --farol: #f4b740;             /* só em ilustrações e no ponteiro (nunca em texto) */
-  --odo-fundo: #13201f;
+  --marca-fundo: #eef0f7;       /* painel de marca da entrada (claro e discreto) */
+  --marca-fundo-2: #e3e6f1;
+  --odo-fundo: #2a2e35;         /* casinhas do odômetro: grafite neutro */
   --odo-texto: #ffffff;
-  --ok: #1d7a4c;      --ok-suave: #e5f4ec;      --ok-borda: #b9dfca;
-  --aviso: #885200;   --aviso-suave: #fff1d6;   --aviso-borda: #efd29b;
+  --ok: #1f7a4c;      --ok-suave: #e7f4ec;      --ok-borda: #bfe0cc;
+  --aviso: #875300;   --aviso-suave: #fdf1dc;   --aviso-borda: #edd3a2;
   --atraso: #b42318;  --atraso-suave: #fdeceb;  --atraso-borda: #f2c4bf;
   --erro-texto: #7a1a12; --aviso-texto: #5c3800; --ok-texto: #165537;
-  --sombra: 0 1px 2px rgba(13, 40, 38, .05), 0 2px 6px rgba(13, 40, 38, .04);
-  --sombra-alta: 0 10px 30px rgba(13, 40, 38, .12);
-  --veu: rgba(10, 24, 23, .45);
+  --sombra: 0 1px 2px rgba(20, 24, 30, .05), 0 2px 6px rgba(20, 24, 30, .04);
+  --sombra-alta: 0 10px 30px rgba(20, 24, 30, .12);
+  --veu: rgba(20, 23, 28, .45);
   --cor-carro: #4f7299;
   --raio: 1rem;
   --raio-painel: 1.25rem;
@@ -49,68 +46,64 @@
 
 /* ---------- Tema escuro (escolhido, ou automático com o celular no modo escuro) ---------- */
 :root[data-tema="escuro"] {
-  --fundo: #0c1413;
-  --superficie: #141f1e;
-  --superficie-2: #1c2a29;
-  --superficie-3: #182423;
-  --tinta: #e8f0ee;
-  --tinta-2: #bfcdca;
-  --tinta-3: #9cadaa;
-  --linha: #263735;
-  --linha-forte: #71847f;
-  --acento: #3cc1b0;
-  --acento-forte: #6fd6c8;
-  --acento-suave: #12332f;
-  --acento-texto: #74dbcd;
-  --botao-fundo: #3cc1b0;
-  --botao-fundo-hover: #6fd6c8;
-  --botao-texto: #04201c;
-  --petroleo: #0f2d2b;
-  --petroleo-2: #15403c;
-  --sobre-petroleo: #e8f6f2;
-  --sobre-petroleo-2: #a9cfc7;
-  --odo-fundo: #08100f;
-  --odo-texto: #f1f7f6;
-  --ok: #6fd6a0;      --ok-suave: #102c1e;      --ok-borda: #1f5138;
-  --aviso: #f3bd62;   --aviso-suave: #2e220c;   --aviso-borda: #5a4316;
-  --atraso: #ff8f82;  --atraso-suave: #351513;  --atraso-borda: #6b2722;
-  --erro-texto: #ffc2bb; --aviso-texto: #f8d9a0; --ok-texto: #b5ecce;
-  --sombra: 0 1px 2px rgba(0, 0, 0, .3);
-  --sombra-alta: 0 10px 30px rgba(0, 0, 0, .45);
-  --veu: rgba(0, 0, 0, .6);
+  --fundo: #1d2024;
+  --superficie: #26292e;
+  --superficie-2: #30343a;
+  --superficie-3: #2a2d33;
+  --tinta: #eceef1;
+  --tinta-2: #c4c9d0;
+  --tinta-3: #a3aab3;
+  --linha: #383c43;
+  --linha-forte: #80878f;
+  --acento: #b7bddb;
+  --acento-forte: #c9cde6;
+  --acento-suave: #363a52;
+  --acento-texto: #c9cde6;
+  --botao-fundo: #b7bddb;
+  --botao-fundo-hover: #c9cde6;
+  --botao-texto: #1d2140;
+  --marca-fundo: #26292e;
+  --marca-fundo-2: #2d3036;
+  --odo-fundo: #16181b;
+  --odo-texto: #f1f2f4;
+  --ok: #86d6aa;      --ok-suave: #24372d;      --ok-borda: #36513f;
+  --aviso: #f0c26e;   --aviso-suave: #3b3223;   --aviso-borda: #5c4b2b;
+  --atraso: #ff9d92;  --atraso-suave: #432b2a;  --atraso-borda: #6a3a36;
+  --erro-texto: #ffcbc4; --aviso-texto: #f6dba6; --ok-texto: #bfe9cf;
+  --sombra: 0 1px 2px rgba(0, 0, 0, .25);
+  --sombra-alta: 0 10px 30px rgba(0, 0, 0, .4);
+  --veu: rgba(0, 0, 0, .55);
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root[data-tema="auto"] {
-    --fundo: #0c1413;
-    --superficie: #141f1e;
-    --superficie-2: #1c2a29;
-    --superficie-3: #182423;
-    --tinta: #e8f0ee;
-    --tinta-2: #bfcdca;
-    --tinta-3: #9cadaa;
-    --linha: #263735;
-    --linha-forte: #71847f;
-    --acento: #3cc1b0;
-    --acento-forte: #6fd6c8;
-    --acento-suave: #12332f;
-    --acento-texto: #74dbcd;
-    --botao-fundo: #3cc1b0;
-    --botao-fundo-hover: #6fd6c8;
-    --botao-texto: #04201c;
-    --petroleo: #0f2d2b;
-    --petroleo-2: #15403c;
-    --sobre-petroleo: #e8f6f2;
-    --sobre-petroleo-2: #a9cfc7;
-    --odo-fundo: #08100f;
-    --odo-texto: #f1f7f6;
-    --ok: #6fd6a0;      --ok-suave: #102c1e;      --ok-borda: #1f5138;
-    --aviso: #f3bd62;   --aviso-suave: #2e220c;   --aviso-borda: #5a4316;
-    --atraso: #ff8f82;  --atraso-suave: #351513;  --atraso-borda: #6b2722;
-    --erro-texto: #ffc2bb; --aviso-texto: #f8d9a0; --ok-texto: #b5ecce;
-    --sombra: 0 1px 2px rgba(0, 0, 0, .3);
-    --sombra-alta: 0 10px 30px rgba(0, 0, 0, .45);
-    --veu: rgba(0, 0, 0, .6);
+    --fundo: #1d2024;
+    --superficie: #26292e;
+    --superficie-2: #30343a;
+    --superficie-3: #2a2d33;
+    --tinta: #eceef1;
+    --tinta-2: #c4c9d0;
+    --tinta-3: #a3aab3;
+    --linha: #383c43;
+    --linha-forte: #80878f;
+    --acento: #b7bddb;
+    --acento-forte: #c9cde6;
+    --acento-suave: #363a52;
+    --acento-texto: #c9cde6;
+    --botao-fundo: #b7bddb;
+    --botao-fundo-hover: #c9cde6;
+    --botao-texto: #1d2140;
+    --marca-fundo: #26292e;
+    --marca-fundo-2: #2d3036;
+    --odo-fundo: #16181b;
+    --odo-texto: #f1f2f4;
+    --ok: #86d6aa;      --ok-suave: #24372d;      --ok-borda: #36513f;
+    --aviso: #f0c26e;   --aviso-suave: #3b3223;   --aviso-borda: #5c4b2b;
+    --atraso: #ff9d92;  --atraso-suave: #432b2a;  --atraso-borda: #6a3a36;
+    --erro-texto: #ffcbc4; --aviso-texto: #f6dba6; --ok-texto: #bfe9cf;
+    --sombra: 0 1px 2px rgba(0, 0, 0, .25);
+    --sombra-alta: 0 10px 30px rgba(0, 0, 0, .4);
+    --veu: rgba(0, 0, 0, .55);
     color-scheme: dark;
   }
 }
@@ -192,12 +185,12 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px
 
 .faixa-demo {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .4rem .75rem;
-  background: var(--petroleo); color: var(--sobre-petroleo); text-align: center;
-  padding: .55rem 1.1rem; font-size: .9rem;
+  background: var(--acento-suave); color: var(--tinta); text-align: center;
+  padding: .55rem 1.1rem; font-size: .9rem; border-bottom: 1px solid var(--linha);
 }
 .faixa-demo button {
   min-height: 2.5rem; padding: .2rem .9rem; cursor: pointer;
-  background: transparent; color: var(--sobre-petroleo); border: 1.5px solid var(--sobre-petroleo-2); border-radius: 999px; font-weight: 680;
+  background: var(--superficie); color: var(--acento-texto); border: 1.5px solid var(--linha-forte); border-radius: 999px; font-weight: 680;
 }
 .conexao {
   background: var(--tinta); color: var(--fundo); text-align: center; padding: .55rem 1.1rem; font-weight: 600; font-size: .95rem;
@@ -230,25 +223,21 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px
 }
 .cartao > h2:first-child { margin-top: 0; }
 
-/* Quadro de instrumentos do painel */
+/* Quadro de instrumentos do painel: superfície neutra, só um fio na cor do carro */
 .quadro {
   position: relative; overflow: hidden;
   display: grid; grid-template-columns: 1fr; gap: .9rem;
-  background: radial-gradient(120% 140% at 100% 0%, var(--petroleo-2) 0%, var(--petroleo) 60%);
-  color: var(--sobre-petroleo); border-radius: 1.5rem; padding: 1.3rem 1.2rem 1.2rem; margin: .25rem 0 1rem;
+  background: var(--superficie); border: 1px solid var(--linha); box-shadow: var(--sombra);
+  color: var(--tinta); border-radius: var(--raio-painel); padding: 1.2rem 1.2rem 1.1rem; margin: .25rem 0 1rem;
 }
-.quadro::before { content: ""; position: absolute; left: 1.2rem; right: 1.2rem; top: 0; height: 4px; border-radius: 0 0 4px 4px; background: var(--tom, var(--cor-carro)); }
-.quadro .info-rotulo { color: var(--sobre-petroleo-2); }
-.quadro .info-valor { color: var(--sobre-petroleo); font-size: 1.9rem; }
-.quadro .info-valor small { font-size: .55em; font-weight: 650; color: var(--sobre-petroleo-2); }
-.quadro .info-extra { color: var(--sobre-petroleo-2); }
-.quadro .odometro .dig { background: rgba(255, 255, 255, .1); color: var(--sobre-petroleo); border-color: rgba(255, 255, 255, .14); }
-.quadro .odometro .un { color: var(--sobre-petroleo-2); }
-.quadro-item + .quadro-item { border-top: 1px solid rgba(255, 255, 255, .14); padding-top: .9rem; }
+.quadro::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--tom, var(--cor-carro)); }
+.quadro .info-valor { font-size: 1.9rem; }
+.quadro .info-valor small { font-size: .55em; font-weight: 650; color: var(--tinta-3); }
+.quadro-item + .quadro-item { border-top: 1px solid var(--linha); padding-top: .9rem; }
 .quadro .odometro { font-size: 2.1rem; }
 @media (min-width: 600px) {
   .quadro { grid-template-columns: 1.15fr 1fr; gap: 1.25rem; }
-  .quadro-item + .quadro-item { border-top: 0; padding-top: 0; border-left: 1px solid rgba(255, 255, 255, .14); padding-left: 1.25rem; }
+  .quadro-item + .quadro-item { border-top: 0; padding-top: 0; border-left: 1px solid var(--linha); padding-left: 1.25rem; }
 }
 
 /* Odômetro: cada algarismo numa casinha */
@@ -258,6 +247,21 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px
   background: var(--odo-fundo); color: var(--odo-texto); border-radius: .3em; border: 1px solid transparent;
 }
 .odometro .sep { opacity: .75; margin: 0 -1px; }
+.odo-visual { display: inline-flex; align-items: baseline; gap: 2px; }
+/* Rolagem do odômetro: a fita de algarismos sobe até o valor novo */
+.odometro .dig.rola { position: relative; overflow: hidden; height: calc(1.15em + .16em); vertical-align: bottom; }
+.odometro .fita {
+  display: flex; flex-direction: column; align-items: center;
+  animation: rolar-odometro .8s cubic-bezier(.25, .8, .25, 1) both;
+}
+.odometro .fita > span { display: block; height: 1.15em; line-height: 1.15em; }
+@keyframes rolar-odometro {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(var(--passos) * -1.15em)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .odometro .fita { animation: none; transform: translateY(calc(var(--passos) * -1.15em)); }
+}
 .odometro .un { margin-left: .3em; font-size: .6em; font-weight: 650; color: var(--tinta-3); }
 
 /* Ações principais do painel: dois botões grandes com ícone */
@@ -409,14 +413,14 @@ details.mais[open] { padding-bottom: 1rem; }
 .datas-filtro label { font-weight: 650; font-size: .95rem; }
 
 .resumo-periodo {
-  background: var(--petroleo); color: var(--sobre-petroleo); border-radius: var(--raio-painel);
-  padding: 1rem 1.1rem; margin-bottom: .85rem;
+  background: var(--superficie); border: 1px solid var(--linha); color: var(--tinta); border-radius: var(--raio-painel);
+  padding: 1rem 1.1rem; margin-bottom: .85rem; box-shadow: var(--sombra);
 }
-.resumo-periodo .resumo-titulo { margin: 0; color: var(--sobre-petroleo-2); }
-.resumo-periodo .resumo-titulo strong { color: var(--sobre-petroleo); font-size: 1.08rem; }
+.resumo-periodo .resumo-titulo { margin: 0; color: var(--tinta-2); }
+.resumo-periodo .resumo-titulo strong { color: var(--tinta); font-size: 1.08rem; }
 .numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: .6rem 1rem; margin: .7rem 0 0; }
 .numeros div { min-width: 0; }
-.numeros dt { font-size: .78rem; font-weight: 700; color: var(--sobre-petroleo-2); letter-spacing: .03em; }
+.numeros dt { font-size: .78rem; font-weight: 700; color: var(--tinta-3); letter-spacing: .03em; }
 .numeros dd { margin: 0; font-size: 1.25rem; font-weight: 750; letter-spacing: -0.01em; }
 
 /* Registros: um único painel com linhas divisórias, ícone do tipo à esquerda */
@@ -448,7 +452,7 @@ details.mais[open] { padding-bottom: 1rem; }
 .barras .rotulos { display: flex; justify-content: space-between; gap: .5rem; font-size: 1rem; margin-bottom: .35rem; }
 .barras .rotulos strong { white-space: nowrap; }
 .barras .trilho { height: .85rem; background: var(--superficie-2); border-radius: 999px; }
-.barras .barra { height: 100%; background: color-mix(in srgb, var(--acento) 70%, var(--superficie)); border-radius: 999px; min-width: 6px; }
+.barras .barra { height: 100%; background: color-mix(in srgb, var(--acento) 55%, var(--superficie)); border-radius: 999px; min-width: 6px; }
 .barras .barra.destaque { background: var(--acento); }
 .legenda-simples { font-size: .9rem; color: var(--tinta-3); }
 
@@ -650,17 +654,16 @@ body.modo-entrada .tela { max-width: none; padding: 0; }
 .entrada-marca {
   flex: 0 0 44%; flex-direction: column; justify-content: center; gap: 1.75rem;
   padding: 3.5rem clamp(2rem, 5vw, 4.5rem);
-  background: radial-gradient(130% 90% at 0% 0%, var(--petroleo-2) 0%, var(--petroleo) 55%);
-  color: var(--sobre-petroleo);
+  background: linear-gradient(160deg, var(--marca-fundo) 0%, var(--marca-fundo-2) 100%);
+  color: var(--tinta); border-right: 1px solid var(--linha);
 }
-.entrada-marca .marca-app strong { font-size: 1.45rem; color: var(--sobre-petroleo); }
-.entrada-marca .marca-app small { color: var(--sobre-petroleo-2); }
-.entrada-marca .marca-app img { width: 3.5rem; height: 3.5rem; box-shadow: 0 0 0 1px rgba(255, 255, 255, .18); }
+.entrada-marca .marca-app strong { font-size: 1.45rem; }
+.entrada-marca .marca-app img { width: 3.5rem; height: 3.5rem; }
 .entrada-frase { font-size: clamp(1.6rem, 2.6vw, 2.3rem); font-weight: 760; letter-spacing: -0.025em; line-height: 1.15; margin: 0; }
-.entrada-ilustracao { width: min(100%, 22rem); color: var(--sobre-petroleo); }
-.entrada-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .85rem; color: var(--sobre-petroleo-2); }
+.entrada-ilustracao { width: min(100%, 22rem); color: var(--tinta-2); }
+.entrada-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .85rem; color: var(--tinta-2); }
 .entrada-lista li { display: flex; align-items: center; gap: .75rem; }
-.entrada-lista .icone { width: 1.5rem; height: 1.5rem; color: var(--farol); }
+.entrada-lista .icone { width: 1.5rem; height: 1.5rem; color: var(--acento-texto); }
 
 /* ---------- Tablet e computador ---------- */
 @media (min-width: 768px) {
@@ -722,4 +725,52 @@ body.modo-entrada .tela { max-width: none; padding: 0; }
 @media (max-width: 440px) {
   html[data-texto="enorme"] .tabela, html[data-texto="maior"] .tabela { font-size: .8rem; }
   html[data-texto="enorme"] .tabela th, html[data-texto="enorme"] .tabela td { padding: .5rem .2rem; }
+}
+
+/* ---------- Campo de data (dd/mm/aaaa + calendário próprio) ---------- */
+.data-caixa { position: relative; display: flex; align-items: stretch; }
+.data-caixa .data-texto { padding-right: 4.2rem; letter-spacing: .02em; }
+.data-abrir {
+  position: absolute; right: .35rem; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center; width: 3rem; height: 3rem;
+  border: 0; border-radius: .75rem; background: var(--superficie-2); color: var(--tinta-2); cursor: pointer;
+}
+.data-abrir:hover { background: var(--acento-suave); color: var(--acento-texto); }
+.data-abrir .icone { width: 1.45rem; height: 1.45rem; }
+.campo-data.aberto .data-abrir { background: var(--acento-suave); color: var(--acento-texto); }
+.campo-data.data-invalida .data-texto { border-color: var(--atraso); }
+.campo-data.data-invalida .data-ajuda { color: var(--atraso); font-weight: 600; }
+.calendario {
+  margin-top: .5rem; padding: .75rem; max-width: 22rem;
+  background: var(--superficie); border: 1px solid var(--linha); border-radius: 1.1rem; box-shadow: var(--sombra-alta);
+}
+.cal-topo { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .35rem; }
+.cal-titulo { margin: 0; font-weight: 750; }
+.cal-titulo::first-letter { text-transform: uppercase; }
+.cal-nav {
+  width: 2.75rem; height: 2.75rem; border: 0; border-radius: 50%; background: var(--superficie-2); color: var(--tinta);
+  font-size: 1.5rem; line-height: 1; cursor: pointer;
+}
+.cal-nav:disabled { opacity: .35; cursor: default; }
+.cal-grade { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.cal-grade th { font-size: .78rem; font-weight: 700; color: var(--tinta-3); padding: .3rem 0; text-align: center; }
+.cal-grade td { padding: 1px; text-align: center; }
+.cal-dia {
+  width: 100%; aspect-ratio: 1; max-width: 2.9rem; min-height: 2.5rem; border: 0; border-radius: .7rem;
+  background: none; color: var(--tinta); font-weight: 600; font-size: 1rem; cursor: pointer;
+}
+.cal-dia:hover { background: var(--superficie-2); }
+.cal-dia.hoje { box-shadow: inset 0 0 0 1.5px var(--acento); color: var(--acento-texto); font-weight: 800; }
+.cal-dia.escolhido { background: var(--botao-fundo); color: var(--botao-texto); font-weight: 800; }
+.cal-dia:disabled { color: var(--tinta-3); opacity: .4; cursor: default; background: none; }
+.cal-rodape { display: flex; gap: .5rem; margin-top: .5rem; padding-top: .6rem; border-top: 1px solid var(--linha); }
+.cal-acao {
+  flex: 1; min-height: 2.9rem; border-radius: .75rem; border: 1.5px solid var(--linha-forte);
+  background: var(--superficie); color: var(--tinta); font-weight: 680; cursor: pointer;
+}
+.cal-acao.cal-hoje { background: var(--acento-suave); border-color: var(--acento); color: var(--acento-texto); }
+.cal-acao:disabled { opacity: .4; }
+@media (max-width: 599px) {
+  .datas-filtro { grid-template-columns: 1fr; gap: 0; }
+  .calendario { max-width: none; }
 }

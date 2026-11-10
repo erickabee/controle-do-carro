@@ -44,9 +44,10 @@ Para cadastrar outro carro, toque em **+ Adicionar carro**, no fim da Garagem.
    - **Quantos litros:** está na nota ou na bomba (ex.: 35,5).
    - **Valor total pago:** está na nota (ex.: 220,00).
 3. **Encheu o tanque até o fim?** Deixe **Sim** se o frentista completou o tanque.
-4. Toque em **✔ Salvar abastecimento**.
+4. A **data** já vem com o dia de hoje. Para mudar, digite só os números (por exemplo `05112026` vira 05/11/2026) ou toque no **calendário** ao lado do campo, escolha o dia e use **‹ ›** para trocar de mês. O botão **Hoje** volta para o dia de hoje.
+5. Toque em **✔ Salvar abastecimento**.
 
-O aplicativo mostra quanto o carro andou, o consumo e o preço do litro.
+O aplicativo mostra quanto o carro andou, o consumo e o preço do litro. No painel, os números da quilometragem “rolam” rapidinho até o valor novo, como no painel do carro.
 
 **Desistiu?** Toque em **← Voltar** (no alto) ou em **Cancelar** (no fim). Você volta para a tela de onde veio. Se já tinha preenchido algo, o aplicativo pergunta antes de descartar.
 
