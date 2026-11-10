@@ -47,7 +47,7 @@ Para cadastrar outro carro, toque em **+ Adicionar carro**, no fim da Garagem.
 4. A **data** já vem com o dia de hoje. Para mudar, digite só os números (por exemplo `05112026` vira 05/11/2026) ou toque no **calendário** ao lado do campo, escolha o dia e use **‹ ›** para trocar de mês. O botão **Hoje** volta para o dia de hoje.
 5. Toque em **✔ Salvar abastecimento**.
 
-O aplicativo mostra quanto o carro andou, o consumo e o preço do litro. No painel, os números da quilometragem “rolam” rapidinho até o valor novo, como no painel do carro.
+Enquanto você preenche os litros e o valor, aparece o **preço por litro**, calculado sozinho (valor ÷ litros); não precisa digitá-lo. Depois de salvar, o aplicativo mostra o valor total, os litros, o preço por litro, quanto o carro andou e o consumo. No GNV, o preço aparece por m³. No painel, os números da quilometragem “rolam” rapidinho até o valor novo, como no painel do carro.
 
 **Desistiu?** Toque em **← Voltar** (no alto) ou em **Cancelar** (no fim). Você volta para a tela de onde veio. Se já tinha preenchido algo, o aplicativo pergunta antes de descartar.
 

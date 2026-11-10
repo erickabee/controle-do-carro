@@ -815,3 +815,37 @@ body.modo-entrada .tela { max-width: none; padding: 0; }
 /* Celular: símbolo bem pequeno na linha do nome da família, na Garagem */
 .linha-marca { display: flex; align-items: center; gap: .45rem; min-height: 1.2rem; }
 .logo-mini .logo-simbolo { width: 2.1rem; vertical-align: middle; }
+
+/* ---------- Preço por litro (sempre calculado: valor ÷ litros) ---------- */
+.preco-ao-vivo {
+  display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: .1rem .75rem;
+  background: var(--superficie); border: 1.5px solid var(--acento); border-radius: 1rem;
+  padding: .85rem 1rem; margin: -.4rem 0 .75rem;
+}
+.preco-ao-vivo .preco-rotulo { font-weight: 700; color: var(--tinta-2); }
+.preco-ao-vivo .preco-valor { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; color: var(--tinta); text-align: right; }
+.preco-ao-vivo .preco-conta { grid-column: 1 / -1; font-size: .88rem; color: var(--tinta-3); }
+.preco-ao-vivo .preco-espera { grid-column: 1 / -1; font-size: .92rem; color: var(--tinta-3); }
+.preco-valor small, .info-preco small, .preco-chip small, .resumo-abastecimento small, .numeros small { font-size: .62em; font-weight: 650; color: var(--tinta-3); margin-left: 1px; }
+.calculo-ao-vivo[hidden] { display: none; }
+
+.resumo-abastecimento { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin: .25rem 0 .9rem; }
+.resumo-abastecimento div { background: var(--fundo); border-radius: .85rem; padding: .6rem .8rem; }
+.resumo-abastecimento dt { font-size: .8rem; font-weight: 700; color: var(--tinta-3); }
+.resumo-abastecimento dd { margin: 0; font-size: 1.2rem; font-weight: 780; letter-spacing: -0.01em; }
+.resumo-abastecimento .destaque-preco { grid-column: 1 / -1; background: var(--acento-suave); }
+.resumo-abastecimento .destaque-preco dt { color: var(--acento-texto); }
+.resumo-abastecimento .destaque-preco dd { font-size: 1.55rem; }
+
+.info-preco { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .1rem .5rem; margin-top: .55rem; padding-top: .55rem; border-top: 1px dashed var(--linha); }
+.info-preco > span { font-size: .85rem; font-weight: 700; color: var(--tinta-3); }
+.info-preco strong { font-size: 1.2rem; font-weight: 780; }
+
+.preco-linha { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .6rem; margin: .45rem 0 0; }
+.preco-chip { display: inline-flex; align-items: baseline; padding: .15rem .65rem; border-radius: 999px; background: var(--superficie-2); font-weight: 780; font-size: 1.02rem; }
+.variacao { font-size: .9rem; font-weight: 650; }
+.variacao-alta { color: var(--atraso); }
+.variacao-baixa { color: var(--ok); }
+.preco-grupo + .preco-grupo { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--linha); }
+.preco-grupo h3 { margin: .5rem 0 0; }
+.numeros-claros dt { color: var(--tinta-3); }

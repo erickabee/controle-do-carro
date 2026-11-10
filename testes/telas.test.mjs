@@ -777,6 +777,38 @@ await teste('Histórico "Escolher datas": digitar a data filtra como antes', asy
   await ap.click('[data-periodo=tudo]');
 });
 
+await teste('preço por litro: calculado ao preencher, na confirmação, no painel, no Histórico e nos Relatórios', async () => {
+  await ir(ap, '#painel/vw'); await ap.waitForSelector('.quadro');
+  await ap.click('a:has-text("Registrar abastecimento")'); await ap.waitForSelector('#form-abast');
+  assert.equal(await ap.locator('#form-abast input[id*=preco], #form-abast input[name*=preco]').count(), 0, 'sem campo manual de preço');
+  assert.match(await ap.textContent('#preco-ao-vivo'), /aparece aqui/i);
+  await ap.fill('#km', '13200'); await ap.fill('#litros', '35,5'); await ap.fill('#valor', '220');
+  assert.match((await ap.textContent('#preco-ao-vivo')).replace(/\s+/g, ' '), /Preço por litro\s*R\$ 6,20\/L/, '220 ÷ 35,5 = 6,197…');
+  assert.match(await ap.textContent('#preco-ao-vivo'), /R\$ 220,00 ÷ 35,50 litros/);
+  await ap.click('.opcao:has(input[name=combustivel][value=GNV])');
+  assert.match(await ap.textContent('#preco-ao-vivo'), /Preço por m³ \(GNV\)\s*R\$ 6,20\/m³/);
+  await ap.click('.opcao:has(input[name=combustivel][value=Gasolina])');
+  assert.match(await ap.textContent('#preco-ao-vivo'), /Preço por litro \(Gasolina\)/);
+  const t = await salvarFormulario(ap, '#form-abast button[type=submit]');
+  assert.match(t, /Valor total\s*R\$ 220,00/);
+  assert.match(t, /Litros\s*35,50 L/);
+  assert.match(t, /Preço por litro \(Gasolina\)\s*R\$ 6,20\/L/);
+  await ap.waitForSelector('.quadro');
+  assert.match((await ap.textContent('.grade')).replace(/\s+/g, ' '), /Último abastecimento.*R\$ 220,00.*35,50 L • Gasolina.*Preço por litro \(Gasolina\)\s*R\$ 6,20\/L/);
+  await ir(ap, '#historico'); await ap.click('[data-aba=abastecimentos]'); await ap.click('[data-periodo=tudo]');
+  assert.match(await ap.textContent('.registro >> nth=0'), /R\$ 6,20\/L/);
+  assert.match(await ap.textContent('.resumo-periodo'), /Preço médio \(R\$\/L\)/);
+  assert.match(await ap.textContent('.resumo-periodo'), /Preço médio \(R\$\/L\)R\$ [\d.]+,\d\d/, 'um só combustível informado: mostra a média');
+  await ir(ap, '#relatorios');
+  const rel = (await ap.textContent('.tela')).replace(/\s+/g, ' ');
+  assert.match(rel, /Preço por litro/);
+  assert.match(rel, /Gasolina 1 abastecimento\s*Último \(\d\d\/\d\d\/\d{4}\)R\$ 6,20\/L/);
+  await esperarNuvem(async () => (await listar('familias/AP/abastecimentos')).some(a => a.km === 13200), 'abastecimento gravado');
+  const doc = (await listar('familias/AP/abastecimentos')).find(a => a.km === 13200);
+  assert.deepEqual([doc.litros, doc.valor, doc.combustivel], [35.5, 220, 'Gasolina']);
+  assert.ok(!Object.keys(doc).some(k => /preco/i.test(k)), 'o preço não é gravado: é sempre recalculado de valor ÷ litros');
+});
+
 await teste('nenhum erro de JavaScript nas telas novas', async () => assert.deepEqual(ap.errosJs, []));
 
 await teste('nenhum erro de JavaScript durante os testes', async () => assert.deepEqual(p.errosJs, []));

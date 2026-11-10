@@ -213,5 +213,38 @@ teste('validar a correção ignora o próprio registro (não acusa km "menor que
   assert.ok(v.erros.some(function (e) { return /maior/.test(e); }), 'não pode passar do abastecimento seguinte');
 });
 
+teste('preço por litro é sempre valor ÷ litros', function () {
+  perto(C.precoPorLitro(220, 35.5), 6.197183098591549);
+  assert.strictEqual(C.fmtDinheiro(C.precoPorLitro(220, 35.5)), 'R$ 6,20');
+  assert.strictEqual(C.precoPorLitro(220, 0), null);
+  assert.strictEqual(C.precoPorLitro(0, 30), null);
+  assert.strictEqual(C.precoPorLitro(null, 30), null);
+});
+
+teste('rótulo do preço considera o combustível (GNV é por m³)', function () {
+  assert.strictEqual(C.rotuloPreco('Gasolina'), 'Preço por litro (Gasolina)');
+  assert.strictEqual(C.rotuloPreco('Etanol', true), 'R$/L');
+  assert.strictEqual(C.rotuloPreco(''), 'Preço por litro');
+  assert.strictEqual(C.rotuloPreco(undefined, true), 'R$/L');
+  assert.strictEqual(C.rotuloPreco('GNV'), 'Preço por m³ (GNV)');
+  assert.strictEqual(C.rotuloPreco('GNV', true), 'R$/m³');
+});
+
+teste('preço por combustível: média ponderada, primeiro e último, separado por tipo', function () {
+  var g = C.precoPorCombustivel([
+    { data: '2026-01-10', km: 100, litros: 40, valor: 240, combustivel: 'Gasolina' },
+    { data: '2026-02-10', km: 600, litros: 30, valor: 120, combustivel: 'Etanol' },
+    { data: '2026-03-10', km: 900, litros: 20, valor: 130, combustivel: 'Gasolina' },
+    { data: '2026-03-12', km: 950, litros: 10, valor: 70 }
+  ]);
+  assert.deepStrictEqual(g.map(function (x) { return x.combustivel; }), ['', 'Gasolina', 'Etanol']);
+  var gas = g[1];
+  assert.strictEqual(gas.abastecimentos, 2);
+  perto(gas.precoMedio, 370 / 60, 'média = soma dos valores ÷ soma dos litros');
+  perto(gas.primeiro.precoLitro, 6); perto(gas.ultimo.precoLitro, 6.5);
+  assert.strictEqual(gas.ultimo.data, '2026-03-10');
+  perto(g[2].precoMedio, 4);
+});
+
 console.log('\n' + (total - falhas) + ' de ' + total + ' testes passaram.');
 process.exit(falhas ? 1 : 0);

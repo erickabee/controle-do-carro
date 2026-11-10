@@ -403,6 +403,34 @@
   }
   function plural(n, um, varios) { return fmtNum(n) + ' ' + (n === 1 ? um : varios); }
 
+  // ---------- Preço por litro (sempre calculado: valor pago ÷ litros) ----------
+  // GNV é vendido por m³: o cálculo é o mesmo, muda só o nome da unidade.
+  function precoPorLitro(valor, litros) {
+    return (valor > 0 && litros > 0) ? valor / litros : null;
+  }
+  function unidadeCombustivel(combustivel) { return combustivel === 'GNV' ? 'm³' : 'L'; }
+  function rotuloPreco(combustivel, curto) {
+    if (curto) return 'R$/' + unidadeCombustivel(combustivel);
+    return (combustivel === 'GNV' ? 'Preço por m³' : 'Preço por litro') + (combustivel ? ' (' + combustivel + ')' : '');
+  }
+  // Agrupa os abastecimentos por combustível: preço médio (soma dos valores ÷ soma dos litros),
+  // primeiro e último preço. Grupos em ordem do abastecimento mais recente.
+  function precoPorCombustivel(abastecimentos) {
+    var grupos = {};
+    ordenarAbastecimentos(abastecimentos).forEach(function (a) {
+      if (!(a.valor > 0 && a.litros > 0)) return;
+      var k = a.combustivel || '';
+      var g = grupos[k] || (grupos[k] = { combustivel: k, abastecimentos: 0, litros: 0, valor: 0, primeiro: null, ultimo: null });
+      var item = { data: a.data, precoLitro: a.valor / a.litros };
+      g.abastecimentos++; g.litros += a.litros; g.valor += a.valor;
+      if (!g.primeiro) g.primeiro = item;
+      g.ultimo = item;
+    });
+    return Object.keys(grupos).map(function (k) {
+      var g = grupos[k]; g.precoMedio = g.valor / g.litros; return g;
+    }).sort(function (a, b) { return a.ultimo.data < b.ultimo.data ? 1 : a.ultimo.data > b.ultimo.data ? -1 : 0; });
+  }
+
   var C = {
     LIMITE_KM_PROXIMO: LIMITE_KM_PROXIMO, LIMITE_DIAS_PROXIMO: LIMITE_DIAS_PROXIMO, TIPOS: TIPOS,
     parseData: parseData, dataISO: dataISO, hojeISO: hojeISO, somaMeses: somaMeses, diasEntre: diasEntre,
@@ -411,6 +439,7 @@
     gastoPorMes: gastoPorMes, consumoPorMes: consumoPorMes, kmAtual: kmAtual,
     validarAbastecimento: validarAbastecimento, validarManutencao: validarManutencao,
     lembretes: lembretes, nomeManutencao: nomeManutencao,
+    precoPorLitro: precoPorLitro, unidadeCombustivel: unidadeCombustivel, rotuloPreco: rotuloPreco, precoPorCombustivel: precoPorCombustivel,
     fmtNum: fmtNum, fmtKm: fmtKm, fmtDinheiro: fmtDinheiro, fmtData: fmtData, fmtMes: fmtMes, plural: plural
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = C;

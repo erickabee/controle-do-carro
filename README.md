@@ -17,7 +17,7 @@ Com um ou mais carros em casa, é difícil lembrar de cabeça quanto se abastece
 
 ## O que a família consegue fazer
 
-- **Anotar abastecimentos** com a quilometragem do painel, os litros e o valor da nota. O app calcula o preço por litro, quanto o carro andou, o consumo em km por litro, o custo por km e quanto o litro subiu ou baixou.
+- **Anotar abastecimentos** com a quilometragem do painel, os litros e o valor da nota. O app calcula o preço por litro (valor ÷ litros, mostrado já enquanto a pessoa preenche e separado por combustível nos relatórios), quanto o carro andou, o consumo em km por litro, o custo por km e quanto o litro subiu ou baixou.
 - **Registrar manutenções** e receber avisos. A troca de óleo é lembrada a cada 5.000 km (o intervalo pode ser mudado). Pneus e outros serviços avisam por km ou por data, quando a pessoa quiser. Os avisos são frases simples, como “Faltam 500 km para a troca de óleo”.
 - **Começar pela Garagem**, com um cartão para cada carro (nome, marca, modelo, ano, quilometragem e próximo aviso); tocando no carro, abre o painel dele.
 - **Ver o painel** de cada carro com a quilometragem atual, o consumo recente, o gasto do mês, o último abastecimento e a próxima manutenção.

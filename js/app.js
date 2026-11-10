@@ -776,7 +776,9 @@
     h += '<div class="cartao"><span class="info-rotulo">Último abastecimento</span>';
     if (ultimo) {
       h += '<span class="info-valor">' + C.fmtDinheiro(ultimo.valor) + '</span><span class="info-extra">em ' + C.fmtData(ultimo.data) +
-        ' • ' + C.fmtNum(ultimo.litros, 2) + ' L</span>';
+        ' • ' + C.fmtNum(ultimo.litros, 2) + ' ' + C.unidadeCombustivel(ultimo.combustivel) + (ultimo.combustivel ? ' • ' + esc(ultimo.combustivel) : '') + '</span>' +
+        '<span class="info-preco"><span>' + esc(C.rotuloPreco(ultimo.combustivel)) + '</span><strong>' + C.fmtDinheiro(ultimo.precoLitro) +
+        '<small>/' + C.unidadeCombustivel(ultimo.combustivel) + '</small></strong></span>';
     } else {
       h += '<span class="info-valor">—</span><span class="info-extra">Nenhum abastecimento registrado.</span>';
     }
@@ -854,6 +856,7 @@
     h += campoNumero('valor', 'Valor total pago', reg ? textoNumero(reg.valor, 2) : '', 'R$',
       'Exemplo: 220,00', { prefixo: true, placeholder: '0,00' });
 
+    h += '<div class="preco-ao-vivo" id="preco-ao-vivo" aria-live="polite"></div>';
     h += '<div class="calculo-ao-vivo" id="ao-vivo" aria-live="polite"></div>';
 
     var cheio = reg ? reg.tanqueCheio !== false : true;
@@ -883,8 +886,12 @@
       var km = C.lerNumero($('#km').value, true);
       var dist = $('#distancia') ? C.lerNumero($('#distancia').value, true) : null;
       var partes = [];
-      if (l > 0 && v > 0) partes.push('Preço por litro: <strong>' + C.fmtDinheiro(v / l) + '</strong>');
-      else partes.push('O preço por litro aparece aqui quando você preencher os litros e o valor.');
+      var comb = ($('input[name=combustivel]:checked') || {}).value || '';
+      var preco = C.precoPorLitro(v, l);
+      $('#preco-ao-vivo').innerHTML = preco !== null
+        ? '<span class="preco-rotulo">' + esc(C.rotuloPreco(comb)) + '</span><strong class="preco-valor">' + C.fmtDinheiro(preco) + '<small>/' + C.unidadeCombustivel(comb) + '</small></strong>' +
+          '<span class="preco-conta">' + C.fmtDinheiro(v) + ' ÷ ' + C.fmtNum(l, 2) + ' ' + (comb === 'GNV' ? 'm³' : 'litros') + '</span>'
+        : '<span class="preco-rotulo">' + esc(C.rotuloPreco(comb)) + '</span><span class="preco-espera">Aparece aqui quando você preencher os litros e o valor total. É calculado sozinho: valor ÷ litros.</span>';
       var ant = null;
       var data = $('#data').value || hoje;
       var antes = ord.filter(function (a) { return a.data <= data; });
@@ -892,8 +899,9 @@
       if (ant && km !== null && km >= ant.km) partes.push('Andou <strong>' + C.fmtKm(km - ant.km) + '</strong> desde o abastecimento anterior.');
       else if (ant && km === null && dist !== null) partes.push('A quilometragem ficará em <strong>' + C.fmtKm(ant.km + dist) + '</strong>.');
       $('#ao-vivo').innerHTML = partes.join('<br>');
+      $('#ao-vivo').hidden = !partes.length;
     }
-    $$('#form-abast input').forEach(function (i) { i.addEventListener('input', atualizarAoVivo); });
+    $$('#form-abast input').forEach(function (i) { i.addEventListener('input', atualizarAoVivo); i.addEventListener('change', atualizarAoVivo); });
     atualizarAoVivo();
 
     $('#form-abast').addEventListener('submit', function (ev) {
@@ -956,7 +964,12 @@
     var an = C.analisarAbastecimentos(abastDoCarro(registro.carroId));
     var a = an.filter(function (x) { return x.id === registro.id; })[0];
     var itens = [];
-    itens.push('' + C.fmtData(a.data) + ' • ' + C.fmtNum(a.litros, 2) + ' litros • ' + C.fmtDinheiro(a.valor));
+    var un = C.unidadeCombustivel(a.combustivel);
+    var resumo = '<dl class="resumo-abastecimento">' +
+      '<div><dt>Valor total</dt><dd>' + C.fmtDinheiro(a.valor) + '</dd></div>' +
+      '<div><dt>' + (un === 'm³' ? 'Quantidade' : 'Litros') + '</dt><dd>' + C.fmtNum(a.litros, 2) + ' ' + un + '</dd></div>' +
+      '<div class="destaque-preco"><dt>' + esc(C.rotuloPreco(a.combustivel)) + '</dt><dd>' + C.fmtDinheiro(a.precoLitro) + '<small>/' + un + '</small></dd></div></dl>';
+    itens.push('Em ' + C.fmtData(a.data) + (a.combustivel ? ' • ' + esc(a.combustivel) : ''));
     if (a.kmDesdeAnterior !== null) itens.push('Andou <strong>' + C.fmtKm(a.kmDesdeAnterior) + '</strong> desde o abastecimento anterior.');
     if (a.trecho) {
       itens.push('Consumo: <strong>' + C.fmtNum(a.trecho.kmPorLitro, 1) + ' km por litro</strong>' +
@@ -965,16 +978,15 @@
     } else {
       itens.push('' + explicarSemConsumo(a.semConsumo));
     }
-    var preco = 'Preço do litro: <strong>' + C.fmtDinheiro(a.precoLitro) + '</strong>';
     if (a.variacaoPreco) {
       var vr = a.variacaoPreco.reais;
-      if (Math.abs(vr) < 0.005) preco += ' (igual ao anterior)';
-      else preco += ' (' + (vr > 0 ? 'subiu ' : 'baixou ') + C.fmtDinheiro(Math.abs(vr)) + ', ' + C.fmtNum(Math.abs(a.variacaoPreco.pct), 1) + '% ' + (vr > 0 ? 'mais caro' : 'mais barato') + ' que no anterior)';
+      itens.push(Math.abs(vr) < 0.005 ? 'O ' + C.rotuloPreco(a.combustivel, true) + ' ficou igual ao do abastecimento anterior.'
+        : 'Comparado ao abastecimento anterior, o preço ' + (vr > 0 ? 'subiu ' : 'baixou ') + '<strong>' + C.fmtDinheiro(Math.abs(vr)) + '</strong> por ' + (un === 'm³' ? 'm³' : 'litro') +
+          ' (' + C.fmtNum(Math.abs(a.variacaoPreco.pct), 1) + '% ' + (vr > 0 ? 'mais caro' : 'mais barato') + ').');
     }
-    itens.push(preco + '.');
 
     abrirJanela(marca('ok') + '<h2>' + (editado ? 'Abastecimento corrigido!' : 'Abastecimento salvo!') + '</h2>' +
-      '<p>No carro <strong>' + esc(carroPorId(registro.carroId).nome) + '</strong>.</p>' +
+      '<p>No carro <strong>' + esc(carroPorId(registro.carroId).nome) + '</strong>.</p>' + resumo +
       '<ul class="resultado">' + itens.map(function (i) { return '<li>' + i + '</li>'; }).join('') + '</ul>' +
       '<button class="botao botao-principal botao-grande" data-janela="ok">OK</button>',
       { ok: function () { ir(editado ? 'historico' : 'painel/' + encodeURIComponent(registro.carroId), true); } });
@@ -1237,6 +1249,7 @@
         h += '<div class="resumo-periodo"><p class="resumo-titulo"><strong>' + C.plural(lista.length, 'abastecimento', 'abastecimentos') + '</strong> no período</p>' +
           '<dl class="numeros"><div><dt>Total gasto</dt><dd>' + C.fmtDinheiro(total) + '</dd></div>' +
           '<div><dt>Litros</dt><dd>' + C.fmtNum(litros, 1) + ' L</dd></div>' +
+          (precoMedioDoPeriodo(lista)) +
           (lt ? '<div><dt>Consumo médio</dt><dd>' + C.fmtNum(dist / lt, 1) + ' km/L</dd></div>' : '') +
           (km ? '<div><dt>Rodados</dt><dd>' + C.fmtKm(km) + '</dd></div>' : '') + '</dl></div>';
         lista.forEach(function (a) { h += htmlAbastecimento(a, somenteLeitura); });
@@ -1269,6 +1282,18 @@
     }
   }
 
+  // Preço médio do período (soma dos valores ÷ soma dos litros), só quando há um único combustível:
+  // misturar gasolina e etanol daria um número enganoso. A comparação por tipo fica nos Relatórios.
+  function precoMedioDoPeriodo(lista) {
+    var tipos = {};
+    lista.forEach(function (a) { if (a.combustivel) tipos[a.combustivel] = true; });
+    var nomes = Object.keys(tipos);
+    if (nomes.length > 1) return '';
+    var v = 0, l = 0;
+    lista.forEach(function (a) { v += a.valor; l += a.litros; });
+    return l > 0 ? '<div><dt>Preço médio (' + C.rotuloPreco(nomes[0], true) + ')</dt><dd>' + C.fmtDinheiro(v / l) + '</dd></div>' : '';
+  }
+
   function vazio(icone, texto) {
     return '<div class="vazio"><p>' + esc(texto) + '</p></div>';
   }
@@ -1283,13 +1308,16 @@
         a.semConsumo === 'primeiroCheio' ? 'Primeiro tanque cheio: ainda sem consumo.' : 'Sem cálculo de consumo.') + '</span>';
     var variacao = '';
     if (a.variacaoPreco && Math.abs(a.variacaoPreco.reais) >= 0.005) {
-      variacao = ' (' + (a.variacaoPreco.reais > 0 ? '▲ ' : '▼ ') + C.fmtNum(Math.abs(a.variacaoPreco.pct), 1) + '% ' +
-        (a.variacaoPreco.reais > 0 ? 'mais caro' : 'mais barato') + ')';
+      variacao = '<span class="variacao variacao-' + (a.variacaoPreco.reais > 0 ? 'alta' : 'baixa') + '">' + (a.variacaoPreco.reais > 0 ? '▲ ' : '▼ ') + C.fmtNum(Math.abs(a.variacaoPreco.pct), 1) + '% ' +
+        (a.variacaoPreco.reais > 0 ? 'mais caro' : 'mais barato') + '</span>';
     }
+    var un = C.unidadeCombustivel(a.combustivel);
     return '<div class="cartao registro">' + '<span class="registro-icone registro-abast">' + ICONES.bomba + '</span><div class="registro-corpo">' +
       '<div class="linha-topo"><span class="data">' + C.fmtData(a.data) + '</span><span class="valor">' + C.fmtDinheiro(a.valor) + '</span></div>' +
-      '<p class="detalhes">' + C.fmtKm(a.km) + ' • ' + C.fmtNum(a.litros, 2) + ' L • ' + C.fmtDinheiro(a.precoLitro) + '/L' + variacao +
+      '<p class="detalhes">' + C.fmtKm(a.km) + ' • ' + C.fmtNum(a.litros, 2) + ' ' + un +
       (a.combustivel ? ' • ' + esc(a.combustivel) : '') + (a.tanqueCheio === false ? ' <span class="etiqueta">não completou</span>' : '') + '</p>' +
+      '<p class="preco-linha"><span class="preco-chip" title="' + esc(C.rotuloPreco(a.combustivel)) + '"><span class="sr">' + esc(C.rotuloPreco(a.combustivel)) + ': </span>' +
+      C.fmtDinheiro(a.precoLitro) + '<small>/' + un + '</small></span>' + variacao + '</p>' +
       '<p class="calc">' + calcTxt + '</p>' +
       (a.obs ? '<p class="obs">' + esc(a.obs) + '</p>' : '') +
       (somenteLeitura ? '' : '<div class="acoes"><a class="botao botao-secundario" href="#abastecer/' + encodeURIComponent(a.id) + '">Corrigir</a>' +
@@ -1404,7 +1432,7 @@
       }
       var maxC = Math.max.apply(null, itensCons.map(function (i) { return i.valor; }));
       h += barras(itensCons, maxC, true);
-      h += '<p class="legenda-simples">Cada barra é a média do mês (km rodados ÷ litros). A barra verde é o mês mais recente.</p>';
+      h += '<p class="legenda-simples">Cada barra é a média do mês (km rodados ÷ litros). A barra mais forte é o mês mais recente.</p>';
 
       // Tabela detalhada
       var trechos = r.analise.filter(function (a) { return a.trecho && a.data.slice(0, 7) >= mesInicio; }).reverse();
@@ -1419,14 +1447,21 @@
     }
     h += '</div>';
 
-    // ---- Preço do litro
-    var precos = r.analise.filter(function (a) { return a.data.slice(0, 7) >= mesInicio; });
-    if (precos.length > 1) {
-      var pPrim = precos[0], pUlt = precos[precos.length - 1];
-      var dp = (pUlt.precoLitro - pPrim.precoLitro) / pPrim.precoLitro * 100;
-      h += '<div class="cartao"><h2>Preço do litro</h2><p>Primeiro abastecimento do período (' + C.fmtData(pPrim.data) + '): <strong>' + C.fmtDinheiro(pPrim.precoLitro) + '</strong><br>' +
-        'Último (' + C.fmtData(pUlt.data) + '): <strong>' + C.fmtDinheiro(pUlt.precoLitro) + '</strong><br>' +
-        (Math.abs(dp) < 0.5 ? 'O preço ficou praticamente igual.' : 'O litro ficou <strong>' + C.fmtNum(Math.abs(dp), 1) + '% ' + (dp > 0 ? 'mais caro' : 'mais barato') + '</strong>.') + '</p></div>';
+    // ---- Preço por litro (separado por combustível: gasolina e etanol não se misturam)
+    var grupos = C.precoPorCombustivel(r.abastecimentos.filter(function (a) { return a.data.slice(0, 7) >= mesInicio; }));
+    if (grupos.length) {
+      h += '<div class="cartao"><h2>Preço por litro</h2><p class="legenda-simples">Calculado em cada abastecimento: valor pago ÷ litros. A média do período soma os valores e divide pela soma dos litros.</p>';
+      grupos.forEach(function (g) {
+        var un = C.unidadeCombustivel(g.combustivel);
+        var dp = g.abastecimentos > 1 ? (g.ultimo.precoLitro - g.primeiro.precoLitro) / g.primeiro.precoLitro * 100 : null;
+        h += '<div class="preco-grupo"><h3>' + esc(g.combustivel || 'Combustível não informado') + ' <span class="legenda-simples">' + C.plural(g.abastecimentos, 'abastecimento', 'abastecimentos') + '</span></h3>' +
+          '<dl class="numeros numeros-claros"><div><dt>Último (' + C.fmtData(g.ultimo.data) + ')</dt><dd>' + C.fmtDinheiro(g.ultimo.precoLitro) + '<small>/' + un + '</small></dd></div>' +
+          '<div><dt>Média do período</dt><dd>' + C.fmtDinheiro(g.precoMedio) + '<small>/' + un + '</small></dd></div>' +
+          (dp !== null ? '<div><dt>Primeiro (' + C.fmtData(g.primeiro.data) + ')</dt><dd>' + C.fmtDinheiro(g.primeiro.precoLitro) + '<small>/' + un + '</small></dd></div>' : '') + '</dl>' +
+          (dp !== null ? '<p>' + (Math.abs(dp) < 0.5 ? 'O preço ficou praticamente igual no período.' : 'Do primeiro ao último abastecimento, o ' + (un === 'm³' ? 'm³' : 'litro') + ' ficou <strong>' +
+            C.fmtNum(Math.abs(dp), 1) + '% ' + (dp > 0 ? 'mais caro' : 'mais barato') + '</strong>.') + '</p>' : '') + '</div>';
+      });
+      h += '</div>';
     }
 
     // ---- Manutenção
