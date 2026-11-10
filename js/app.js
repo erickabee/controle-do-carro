@@ -189,7 +189,7 @@
     var esquema = document.querySelector('meta[name=color-scheme]');
     if (esquema) esquema.setAttribute('content', aparencia.tema === 'auto' ? 'light dark' : (aparencia.tema === 'escuro' ? 'dark' : 'light'));
     var cor = document.querySelector('meta[name=theme-color]');
-    if (cor) cor.setAttribute('content', temaEfetivo() === 'escuro' ? '#1d2024' : '#f5f6f7');
+    if (cor) cor.setAttribute('content', temaEfetivo() === 'escuro' ? '#1b1e22' : '#f5f6f7');
   }
   if (escuroNoCelular && escuroNoCelular.addEventListener) escuroNoCelular.addEventListener('change', aplicarAparencia);
   function guardarAparenciaNoAparelho() {

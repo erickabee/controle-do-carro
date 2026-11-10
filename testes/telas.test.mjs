@@ -624,7 +624,7 @@ await teste('Aparência: tema e tamanho do texto mudam na hora e vão para o per
   assert.equal(await ap.getAttribute('html', 'data-tema'), 'escuro');
   assert.equal(await ap.getAttribute('html', 'data-texto'), 'enorme');
   assert.ok(await ap.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize)) > tamanho * 1.2, 'o texto ficou maior');
-  assert.equal(await ap.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(29, 32, 36)', 'fundo grafite');
+  assert.equal(await ap.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(27, 30, 34)', 'fundo grafite');
   await esperarNuvem(async () => { const p = (await perfisNaNuvem()).find(x => x.id === UID_AP); return p && p.tema === 'escuro' && p.texto === 'enorme'; }, 'perfil gravado');
   const perfil = (await perfisNaNuvem()).find(x => x.id === UID_AP);
   assert.deepEqual(Object.keys(perfil).filter(k => !['id', 'atualizado'].includes(k)).sort(), ['atualizadoEm', 'tema', 'texto'], 'só as preferências, nada dos carros');

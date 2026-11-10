@@ -28,8 +28,9 @@
   --botao-texto: #ffffff;
   --marca-fundo: #eef0f7;       /* painel de marca da entrada (claro e discreto) */
   --marca-fundo-2: #e3e6f1;
-  --odo-fundo: #2a2e35;         /* casinhas do odômetro: grafite neutro */
-  --odo-texto: #ffffff;
+  --odo-fundo: #e4e8ee;         /* casinhas do odômetro: cinza claro */
+  --odo-texto: #1b1e23;
+  --odo-borda: #d2d7de;
   --ok: #1f7a4c;      --ok-suave: #e7f4ec;      --ok-borda: #bfe0cc;
   --aviso: #875300;   --aviso-suave: #fdf1dc;   --aviso-borda: #edd3a2;
   --atraso: #b42318;  --atraso-suave: #fdeceb;  --atraso-borda: #f2c4bf;
@@ -46,26 +47,27 @@
 
 /* ---------- Tema escuro (escolhido, ou automático com o celular no modo escuro) ---------- */
 :root[data-tema="escuro"] {
-  --fundo: #1d2024;
-  --superficie: #26292e;
-  --superficie-2: #30343a;
-  --superficie-3: #2a2d33;
-  --tinta: #eceef1;
-  --tinta-2: #c4c9d0;
-  --tinta-3: #a3aab3;
-  --linha: #383c43;
-  --linha-forte: #80878f;
-  --acento: #b7bddb;
-  --acento-forte: #c9cde6;
-  --acento-suave: #363a52;
-  --acento-texto: #c9cde6;
-  --botao-fundo: #b7bddb;
-  --botao-fundo-hover: #c9cde6;
-  --botao-texto: #1d2140;
-  --marca-fundo: #26292e;
-  --marca-fundo-2: #2d3036;
-  --odo-fundo: #16181b;
-  --odo-texto: #f1f2f4;
+  --fundo: #1b1e22;
+  --superficie: #2b2f36;
+  --superficie-2: #373c45;
+  --superficie-3: #31353c;
+  --tinta: #eef0f2;
+  --tinta-2: #c7ccd3;
+  --tinta-3: #a6adb6;
+  --linha: #434951;
+  --linha-forte: #838b95;
+  --acento: #8fa0b8;
+  --acento-forte: #a9b7ca;
+  --acento-suave: #333d4b;
+  --acento-texto: #b3c0d3;
+  --botao-fundo: #8fa0b8;
+  --botao-fundo-hover: #a9b7ca;
+  --botao-texto: #141a22;
+  --marca-fundo: #2b2f36;
+  --marca-fundo-2: #31353c;
+  --odo-fundo: #454b55;
+  --odo-borda: #565d68;
+  --odo-texto: #f3f5f7;
   --ok: #86d6aa;      --ok-suave: #24372d;      --ok-borda: #36513f;
   --aviso: #f0c26e;   --aviso-suave: #3b3223;   --aviso-borda: #5c4b2b;
   --atraso: #ff9d92;  --atraso-suave: #432b2a;  --atraso-borda: #6a3a36;
@@ -77,26 +79,27 @@
 }
 @media (prefers-color-scheme: dark) {
   :root[data-tema="auto"] {
-    --fundo: #1d2024;
-    --superficie: #26292e;
-    --superficie-2: #30343a;
-    --superficie-3: #2a2d33;
-    --tinta: #eceef1;
-    --tinta-2: #c4c9d0;
-    --tinta-3: #a3aab3;
-    --linha: #383c43;
-    --linha-forte: #80878f;
-    --acento: #b7bddb;
-    --acento-forte: #c9cde6;
-    --acento-suave: #363a52;
-    --acento-texto: #c9cde6;
-    --botao-fundo: #b7bddb;
-    --botao-fundo-hover: #c9cde6;
-    --botao-texto: #1d2140;
-    --marca-fundo: #26292e;
-    --marca-fundo-2: #2d3036;
-    --odo-fundo: #16181b;
-    --odo-texto: #f1f2f4;
+    --fundo: #1b1e22;
+    --superficie: #2b2f36;
+    --superficie-2: #373c45;
+    --superficie-3: #31353c;
+    --tinta: #eef0f2;
+    --tinta-2: #c7ccd3;
+    --tinta-3: #a6adb6;
+    --linha: #434951;
+    --linha-forte: #838b95;
+    --acento: #8fa0b8;
+    --acento-forte: #a9b7ca;
+    --acento-suave: #333d4b;
+    --acento-texto: #b3c0d3;
+    --botao-fundo: #8fa0b8;
+    --botao-fundo-hover: #a9b7ca;
+    --botao-texto: #141a22;
+    --marca-fundo: #2b2f36;
+    --marca-fundo-2: #31353c;
+    --odo-fundo: #454b55;
+    --odo-borda: #565d68;
+  --odo-texto: #f3f5f7;
     --ok: #86d6aa;      --ok-suave: #24372d;      --ok-borda: #36513f;
     --aviso: #f0c26e;   --aviso-suave: #3b3223;   --aviso-borda: #5c4b2b;
     --atraso: #ff9d92;  --atraso-suave: #432b2a;  --atraso-borda: #6a3a36;
@@ -244,7 +247,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px
 .odometro { display: inline-flex; align-items: baseline; flex-wrap: nowrap; white-space: nowrap; gap: 2px; font-weight: 720; letter-spacing: 0; }
 .odometro .dig {
   display: inline-block; min-width: .95em; text-align: center; padding: .08em .1em; line-height: 1.15;
-  background: var(--odo-fundo); color: var(--odo-texto); border-radius: .3em; border: 1px solid transparent;
+  background: var(--odo-fundo); color: var(--odo-texto); border-radius: .3em; border: 1px solid var(--odo-borda);
 }
 .odometro .sep { opacity: .75; margin: 0 -1px; }
 .odo-visual { display: inline-flex; align-items: baseline; gap: 2px; }
