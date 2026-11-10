@@ -809,6 +809,37 @@ await teste('preço por litro: calculado ao preencher, na confirmação, no pain
   assert.ok(!Object.keys(doc).some(k => /preco/i.test(k)), 'o preço não é gravado: é sempre recalculado de valor ÷ litros');
 });
 
+await teste('combustíveis diferentes no período: nada de média combinada no relatório nem no Histórico', async () => {
+  // Carro do Pai: 3 abastecimentos sem combustível informado (R$ 6,00/L), 1 de Gasolina (R$ 6,20/L) e agora 1 de Etanol (R$ 4,20/L).
+  await gravarDoc('familias/AP/abastecimentos/etanol1', { carroId: 'vw', data: HOJE, km: 13600, litros: 40, valor: 168, tanqueCheio: true, combustivel: 'Etanol' });
+  const todos = (await listar('familias/AP/abastecimentos')).filter(a => a.carroId === 'vw');
+  const combinada = todos.reduce((s, a) => s + a.valor, 0) / todos.reduce((s, a) => s + a.litros, 0);
+  const fmt = (n) => 'R$ ' + n.toFixed(2).replace('.', ',');
+  assert.equal(fmt(combinada), 'R$ 5,61', 'média que misturaria os combustíveis (não pode aparecer)');
+  await ir(ap, '#painel/vw'); await ap.waitForSelector('.quadro');
+  await ir(ap, '#relatorios'); await ap.click('[data-rel=tudo]');
+  await ap.waitForFunction(() => document.querySelectorAll('.preco-grupo').length === 3);
+  const grupos = await ap.locator('.preco-grupo').evaluateAll(gs => gs.map(g => ({
+    nome: g.querySelector('h3').firstChild.textContent.trim(),
+    media: [...g.querySelectorAll('dl div')].find(d => /Média do período/.test(d.textContent)).querySelector('dd').textContent
+  })));
+  grupos.sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
+  assert.deepEqual(grupos, [
+    { nome: 'Combustível não informado', media: 'R$ 6,00/L' },
+    { nome: 'Etanol', media: 'R$ 4,20/L' },
+    { nome: 'Gasolina', media: 'R$ 6,20/L' }
+  ], 'cada combustível com a própria média (a ordem segue o abastecimento mais recente)');
+  const cartao = (await ap.locator('.cartao:has(h2:text-is("Preço por litro"))').textContent()).replace(/\s+/g, ' ');
+  assert.doesNotMatch(cartao, /R\$ 5,61/, 'nenhuma média combinada no relatório');
+  assert.equal((cartao.match(/Média do período/g) || []).length, 3, 'só as médias por combustível');
+  assert.equal(await ap.locator('.cartao:has(h2:text-is("Preço por litro")) > dl').count(), 0, 'nenhum número fora dos grupos de combustível');
+  await ir(ap, '#historico'); await ap.click('[data-aba=abastecimentos]'); await ap.click('[data-periodo=tudo]');
+  const resumo = await ap.textContent('.resumo-periodo');
+  assert.doesNotMatch(resumo, /Preço médio/, 'Histórico também não mistura combustíveis');
+  assert.doesNotMatch(resumo, /R\$ 5,61/);
+  await fetch(`${FS}/familias/AP/abastecimentos/etanol1`, { method: 'DELETE', headers: DONO });
+});
+
 await teste('nenhum erro de JavaScript nas telas novas', async () => assert.deepEqual(ap.errosJs, []));
 
 await teste('nenhum erro de JavaScript durante os testes', async () => assert.deepEqual(p.errosJs, []));
