@@ -667,7 +667,8 @@
     var hoje = C.hojeISO();
     var compacta = ativos.length > 3;
     var h = '<header class="cabecalho-tela">' +
-      (familia && familia.nome && !estado.demo ? '<span class="sobretitulo">' + esc(familia.nome) + '</span>' : '') +
+      '<span class="sobretitulo linha-marca"><span class="logo-mini">' + SIMBOLO_LOGO + '</span>' +
+      (familia && familia.nome && !estado.demo ? esc(familia.nome) : '<span class="sr">Controle de Bordo</span>') + '</span>' +
       '<h1>Garagem</h1><p>' + C.plural(ativos.length, 'carro', 'carros') + ' · toque no carro para abrir o painel dele.</p></header>';
     if (!estado.demo && dadosAntigosDoAparelho()) {
       h += '<div class="caixa caixa-info"><strong>Registros antigos neste celular</strong>' +
@@ -2020,13 +2021,16 @@
     $('#tentar').addEventListener('click', function () { location.reload(); });
   }
 
-  function marcaDoApp(grande) {
-    return '<div class="marca-app' + (grande ? ' marca-app-grande' : '') + '"><img src="icone.svg" alt="" width="48" height="48">' +
-      '<span><strong>Controle do Carro</strong><small>Abastecimentos e manutenções da família</small></span></div>';
+  // Logo do Controle de Bordo: símbolo (imagem, com uma versão para o tema escuro) e o nome em texto.
+  var SIMBOLO_LOGO = '<span class="logo-simbolo" aria-hidden="true"><img class="so-claro" src="img/logo-simbolo.png" alt="" width="480" height="273"><img class="so-escuro" src="img/logo-simbolo-escuro.png" alt="" width="480" height="273"></span>';
+  function logoHorizontal() {
+    return '<div class="logo-app logo-horizontal">' + SIMBOLO_LOGO +
+      '<span class="logo-texto"><span class="logo-nome"><b>Controle</b> de Bordo</span>' +
+      '<small>Abastecimentos e manutenções da família</small></span></div>';
   }
   function telaLogin() {
     tela.innerHTML = '<div class="entrada">' +
-      '<aside class="entrada-marca" aria-hidden="true">' + marcaDoApp(true) +
+      '<aside class="entrada-marca" aria-hidden="true">' +
       '<p class="entrada-frase">Cada abastecimento anotado.<br>Cada manutenção no prazo.</p>' +
       '<svg class="entrada-ilustracao" viewBox="0 0 320 190" fill="none" stroke-linecap="round" stroke-linejoin="round">' +
       '<path d="M40 160a120 120 0 0 1 240 0" stroke="currentColor" stroke-opacity=".22" stroke-width="14"/>' +
@@ -2037,7 +2041,7 @@
       '<ul class="entrada-lista"><li>' + ICONES.bomba + 'Consumo e gastos calculados sozinhos</li>' +
       '<li>' + ICONES.chave + 'Aviso da troca de óleo e de outras manutenções</li>' +
       '<li>' + ICONES.pessoas + 'Os mesmos dados no celular de cada pessoa</li></ul></aside>' +
-      '<div class="entrada-corpo">' + marcaDoApp(false) +
+      '<div class="entrada-corpo">' + logoHorizontal() +
       '<section class="cartao entrada-cartao"><h1>Entrar</h1>' +
       '<div id="erros"></div>' +
       '<form id="form-login" novalidate>' +

@@ -621,10 +621,6 @@ body.modo-entrada .tela { max-width: none; padding: 0; }
 .entrada { min-height: 100vh; display: flex; }
 .entrada-marca { display: none; }
 .entrada-corpo { flex: 1; width: 100%; max-width: 30rem; margin: 0 auto; padding: 1rem 1.1rem 1.5rem; }
-.marca-app { display: flex; align-items: center; gap: .75rem; margin: 0 0 .9rem; }
-.marca-app img { width: 3rem; height: 3rem; border-radius: .85rem; flex: none; }
-.marca-app strong { display: block; font-size: 1.2rem; letter-spacing: -0.015em; line-height: 1.15; }
-.marca-app small { display: block; font-size: .85rem; color: var(--tinta-3); }
 .entrada-cartao { padding: 1.3rem 1.2rem 1rem; border-radius: 1.5rem; box-shadow: var(--sombra-alta); }
 .entrada-cartao h1 { font-size: 1.6rem; margin-bottom: .9rem; }
 .entrada-dica { color: var(--tinta-2); font-size: .95rem; margin-bottom: 1rem; }
@@ -660,8 +656,6 @@ body.modo-entrada .tela { max-width: none; padding: 0; }
   background: linear-gradient(160deg, var(--marca-fundo) 0%, var(--marca-fundo-2) 100%);
   color: var(--tinta); border-right: 1px solid var(--linha);
 }
-.entrada-marca .marca-app strong { font-size: 1.45rem; }
-.entrada-marca .marca-app img { width: 3.5rem; height: 3.5rem; }
 .entrada-frase { font-size: clamp(1.6rem, 2.6vw, 2.3rem); font-weight: 760; letter-spacing: -0.025em; line-height: 1.15; margin: 0; }
 .entrada-ilustracao { width: min(100%, 22rem); color: var(--tinta-2); }
 .entrada-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .85rem; color: var(--tinta-2); }
@@ -699,7 +693,6 @@ body.modo-entrada .tela { max-width: none; padding: 0; }
   body[data-rota="painel"] .topo-dentro { max-width: 52rem; }
   .entrada-marca { display: flex; }
   .entrada-corpo { display: flex; flex-direction: column; justify-content: center; padding: 3rem 2rem; }
-  .entrada-corpo > .marca-app { display: none; }
 }
 
 /* ---------- Telas bem estreitas ou texto muito grande ---------- */
@@ -777,3 +770,48 @@ body.modo-entrada .tela { max-width: none; padding: 0; }
   .datas-filtro { grid-template-columns: 1fr; gap: 0; }
   .calendario { max-width: none; }
 }
+
+/* ---------- Logo do Controle de Bordo ---------- */
+:root { --logo-tinta: #1e2d4a; }               /* azul-marinho do próprio logo */
+:root[data-tema="escuro"] { --logo-tinta: #e3e8f0; }
+@media (prefers-color-scheme: dark) { :root[data-tema="auto"] { --logo-tinta: #e3e8f0; } }
+.logo-simbolo { display: inline-block; flex: none; line-height: 0; }
+.logo-simbolo img { width: 100%; height: auto; }
+.so-escuro { display: none; }
+:root[data-tema="escuro"] .so-claro { display: none; }
+:root[data-tema="escuro"] .so-escuro { display: inline; }
+@media (prefers-color-scheme: dark) {
+  :root[data-tema="auto"] .so-claro { display: none; }
+  :root[data-tema="auto"] .so-escuro { display: inline; }
+}
+.logo-nome { color: var(--logo-tinta); text-transform: uppercase; letter-spacing: .05em; font-weight: 300; line-height: 1.1; white-space: nowrap; }
+.logo-nome b { font-weight: 800; letter-spacing: .03em; }
+
+/* Entrada: versão horizontal no topo da área de login */
+.logo-horizontal { display: flex; align-items: center; gap: .8rem; margin: .25rem 0 1rem; }
+.logo-horizontal .logo-simbolo { width: 4.4rem; }
+.logo-horizontal .logo-nome { display: block; font-size: 1.12rem; }
+.logo-horizontal small { display: block; margin-top: .2rem; font-size: .82rem; color: var(--tinta-3); }
+
+/* Barra lateral (tablet e computador): símbolo pequeno com o nome */
+.menu-marca { display: none; }
+@media (min-width: 768px) {
+  .menu-marca {
+    display: flex; flex-direction: column; align-items: center; gap: .35rem; text-align: center;
+    padding: .25rem 0 1rem; margin: 0 .2rem .6rem; border-bottom: 1px solid var(--linha);
+  }
+  .menu-marca .logo-simbolo { width: 3.6rem; }
+  .menu-marca .logo-nome { font-size: .66rem; white-space: normal; letter-spacing: .04em; line-height: 1.25; }
+  .menu-marca .logo-nome b { display: block; font-size: .74rem; }
+  /* em tablet/computador o símbolo já está na barra lateral: não repete na Garagem */
+  .linha-marca .logo-mini { display: none; }
+}
+@media (min-width: 1024px) {
+  .logo-horizontal { margin-bottom: 1.5rem; }
+  .logo-horizontal .logo-simbolo { width: 5.6rem; }
+  .logo-horizontal .logo-nome { font-size: 1.45rem; }
+}
+
+/* Celular: símbolo bem pequeno na linha do nome da família, na Garagem */
+.linha-marca { display: flex; align-items: center; gap: .45rem; min-height: 1.2rem; }
+.logo-mini .logo-simbolo { width: 2.1rem; vertical-align: middle; }
