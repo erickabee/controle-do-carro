@@ -57,13 +57,26 @@ Enquanto você preenche os litros e o valor, aparece o **preço por litro**, cal
 2. Escolha **o que foi feito**, confira a **data** e a **quilometragem** e toque em **✔ Salvar manutenção**.
 3. Para pneus e outros serviços, se quiser, preencha **“Quer um lembrete para a próxima vez?”**.
 
-## 6. Avisos
+## 6. Postos: onde abastecer mais barato
+
+Toque em **Postos**, no menu.
+
+1. Escolha o **combustível**.
+2. Em **Onde procurar**, escolha **Perto de mim** ou digite a **cidade** ou o **CEP**.
+3. Escolha **até que distância** procurar e toque em **Buscar postos**.
+   - Com **Perto de mim**, o celular pergunta se pode usar a localização. Ela só é usada nessa busca e não é guardada.
+4. Ordene por **Menor preço**, **Menor distância** ou **Melhor opção**.
+   - **Melhor opção** soma o preço do abastecimento e o combustível gasto para ir e voltar. O app explica a conta e diz se compensa ir mais longe.
+
+Os preços vêm da pesquisa da **ANP**, que é **semanal** e não inclui todos os postos. O preço pode ter mudado: confira na bomba. A busca não muda nada nos seus abastecimentos.
+
+## 7. Avisos
 
 No painel de cada carro e nos cartões da Garagem aparecem avisos:
 - 🟡 **Chegando:** está quase na hora (ex.: “Faltam 500 km para a troca de óleo”).
 - 🔴 **Atrasada:** já passou da hora.
 
-## 7. Errou alguma coisa?
+## 8. Errou alguma coisa?
 
 Toque em **📋 Histórico**, encontre o registro e toque em **✏️ Corrigir** ou **🗑️ Apagar**. O aplicativo sempre pergunta antes de apagar.
 

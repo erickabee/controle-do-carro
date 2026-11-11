@@ -1,7 +1,7 @@
 // Guarda os arquivos do aplicativo para funcionar sem internet.
 // Ao mudar qualquer arquivo, aumente o número da versão abaixo.
-var VERSAO = 'controle-carro-v13';
-var ARQUIVOS = ['./', './index.html', './css/estilo.css', './js/calculos.js', './js/marcas.js', './js/datas.js', './js/demo.js', './js/nuvem.js', './js/app.js',
+var VERSAO = 'controle-carro-v14';
+var ARQUIVOS = ['./', './index.html', './css/estilo.css', './js/calculos.js', './js/marcas.js', './js/datas.js', './js/postos.js', './js/demo.js', './js/nuvem.js', './js/app.js',
   './firebase-config.js', './manifest.webmanifest', './favicon.ico', './favicon-32.png', './icone-180.png', './icone-192.png', './icone-512.png', './icone-maskable-512.png', './img/logo-simbolo.png', './img/logo-simbolo-escuro.png'];
 var SDK = 'https://www.gstatic.com/firebasejs/';
 

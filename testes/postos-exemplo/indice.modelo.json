@@ -1,0 +1,33 @@
+{
+ "fonte": {
+  "nome": "ANP — Levantamento de Preços de Combustíveis (preços por posto revendedor)",
+  "url": "https://www.gov.br/anp/",
+  "arquivo": null,
+  "localizacao": "IBGE — CNEFE 2022"
+ },
+ "periodo": {
+  "inicio": "__INICIO__",
+  "fim": "__FIM__"
+ },
+ "geradoEm": "__GERADO__",
+ "municipios": [
+  {
+   "c": "9999901",
+   "n": "Cidade Exemplo",
+   "uf": "SP",
+   "la": -22.9,
+   "lo": -47.06,
+   "r": 9,
+   "q": 6
+  },
+  {
+   "c": "9999902",
+   "n": "Outra Cidade",
+   "uf": "SP",
+   "la": -23.5,
+   "lo": -46.6,
+   "r": 3,
+   "q": 1
+  }
+ ]
+}

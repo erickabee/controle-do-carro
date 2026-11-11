@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Toda terça-feira: a ANP publica a pesquisa da semana anterior na segunda-feira.
+  # Republica o site com os preços dos postos atualizados (tela Postos).
+  schedule:
+    - cron: '17 12 * * 2'
 
 permissions:
   contents: read
@@ -67,6 +71,24 @@ jobs:
         run: |
           mkdir _site
           cp -r index.html css js img manifest.webmanifest sw.js favicon.ico favicon-32.png icone-180.png icone-192.png icone-512.png icone-maskable-512.png firebase-config.js _site/
+      # Tela Postos: preços da ANP (planilha semanal oficial) + localização pelo CNEFE do IBGE.
+      # Arquivos estáticos em _site/postos/. Sem serviços pagos nem chaves. Se a ANP ou o IBGE
+      # estiverem fora do ar, o resto do site é publicado e a tela Postos avisa que não há dados.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Guardar os arquivos do IBGE e as coordenadas já calculadas
+        uses: actions/cache@v4
+        with:
+          path: .cnefe
+          key: postos-cnefe-${{ github.run_id }}
+          restore-keys: postos-cnefe-
+      - name: Gerar os dados de postos (ANP + IBGE)
+        continue-on-error: true
+        run: |
+          pip install --quiet openpyxl==3.1.5
+          rm -f .cnefe/revendas.xlsx
+          python3 scripts/postos/gerar_postos.py --saida _site/postos --cnefe .cnefe --cache .cnefe/coordenadas.json
       - name: Publicar no Firebase Hosting (controlecarro.web.app)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:

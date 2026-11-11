@@ -1,0 +1,22 @@
+{
+ "m": "Outra Cidade",
+ "uf": "SP",
+ "postos": [
+  {
+   "id": "00000000000011",
+   "n": "Posto Outra Cidade",
+   "b": "Bandeira A",
+   "e": "Rua Longe, 1 - Centro",
+   "cep": "13900000",
+   "la": -23.5,
+   "lo": -46.6,
+   "pr": "endereco",
+   "p": {
+    "GC": [
+     5.69,
+     "2026-11-04"
+    ]
+   }
+  }
+ ]
+}

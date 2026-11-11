@@ -26,3 +26,7 @@ testes/.copia-teste-*.json
 # Site montado pela publicação
 _site/
 _redirecionar/
+
+# Arquivos baixados para gerar os dados da tela Postos (ANP e IBGE)
+.cnefe/
+/postos/

@@ -849,3 +849,42 @@ body.modo-entrada .tela { max-width: none; padding: 0; }
 .preco-grupo + .preco-grupo { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--linha); }
 .preco-grupo h3 { margin: .5rem 0 0; }
 .numeros-claros dt { color: var(--tinta-3); }
+
+/* ---------- Postos (preços da ANP) ---------- */
+.selo-dados { display: flex; align-items: center; gap: .55rem; margin: 0 0 1rem; font-size: .95rem; color: var(--tinta-2); }
+.selo-dados .ponto-status { flex: none; width: .65rem; height: .65rem; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 .25rem var(--ok-suave); }
+.busca-postos .opcoes .opcao input + span { min-height: 3rem; padding: .45rem .9rem; }
+.busca-postos .botao { margin: .25rem 0 0; }
+.campo-texto-postos { margin-top: .6rem; }
+.resultado-postos { margin-top: .5rem; }
+.resultado-postos > h2 { margin-bottom: .25rem; }
+.controles-postos { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem 1rem; margin: .75rem 0 .5rem; }
+.controles-postos .filtros { margin: 0; }
+.filtros button:disabled { opacity: .45; cursor: not-allowed; }
+.caixa-marcar { display: inline-flex; align-items: center; gap: .55rem; min-height: 3rem; font-weight: 650; cursor: pointer; }
+.caixa-marcar input { width: 1.4rem; height: 1.4rem; accent-color: var(--acento); }
+.recomendacao {
+  background: var(--acento-suave); border: 1px solid color-mix(in srgb, var(--acento) 35%, transparent);
+  border-radius: var(--raio-painel); padding: 1rem 1.1rem .4rem; margin: .5rem 0 1rem;
+}
+.recomendacao > p:first-child { margin-bottom: .5rem; }
+.recomendacao-sem { background: var(--superficie); border-color: var(--linha); }
+.recomendacao details.mais { background: var(--superficie); margin: .5rem 0 .75rem; }
+.campos-lado { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 0 .75rem; }
+.lista-postos { list-style: none; padding: 0; margin: 0 0 1rem; }
+.posto {
+  background: var(--superficie); border: 1px solid var(--linha); border-radius: 1.1rem; padding: .85rem 1rem; margin-bottom: .6rem; box-shadow: var(--sombra);
+}
+.posto-destaque { border: 2px solid var(--acento); }
+.posto-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: .75rem; }
+.posto-nome { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; min-width: 0; }
+.posto-nome strong { font-size: 1.08rem; line-height: 1.25; }
+.posto-preco { flex: none; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; }
+.posto-preco small { font-size: .55em; font-weight: 650; color: var(--tinta-3); }
+.posto-end { margin: .45rem 0 .15rem; color: var(--tinta-2); font-size: .95rem; }
+.posto-info { margin: 0; font-size: .9rem; color: var(--tinta-3); }
+.posto-dist { font-weight: 750; color: var(--tinta); }
+.sem-localizacao .posto { box-shadow: none; }
+.fonte-postos { margin-top: 1.5rem; padding: 1rem 1.1rem; border: 1px dashed var(--linha-forte); border-radius: var(--raio-painel); font-size: .92rem; color: var(--tinta-2); }
+.fonte-postos h2 { font-size: 1rem; }
+@media (min-width: 1024px) { body[data-rota="postos"] .tela { max-width: 52rem; } }

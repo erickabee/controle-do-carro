@@ -23,6 +23,7 @@ Com um ou mais carros em casa, é difícil lembrar de cabeça quanto se abastece
 - **Ver o painel** de cada carro com a quilometragem atual, o consumo recente, o gasto do mês, o último abastecimento e a próxima manutenção.
 - **Consultar o histórico** por período, e corrigir ou apagar registros, sempre com confirmação.
 - **Ver relatórios** de gasto com combustível por mês e de consumo ao longo do tempo.
+- **Comparar postos próximos** com os preços pesquisados pela ANP: por preço, por distância ou pelo custo total estimado (abastecimento + ida e volta), com a data da pesquisa e o aviso de que ela é semanal e por amostragem.
 - **Acompanhar um ou mais carros, separados:** cada um tem seus próprios registros, cálculos, lembretes e uma cor própria na tela. A família começa sem nenhum carro, cadastra o primeiro e adiciona outros quando precisar.
 - **Arquivar um carro** que não é mais usado: ele sai da lista, mas todos os registros continuam guardados e podem ser consultados em modo somente leitura ou reativados.
 - **Ajustar a aparência:** texto em três tamanhos e tema claro, escuro ou automático. A escolha acompanha a conta da pessoa em qualquer celular.

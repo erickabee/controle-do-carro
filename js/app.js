@@ -416,7 +416,7 @@
     var emFormulario = !!FORMULARIOS[rota];
     // Garagem e Ajustes são da família toda: não mostram um carro no topo.
     var semCarro = !emFormulario && (!carro || rota === 'boas-vindas' || rota === 'sistema' || rota === 'arquivo');
-    var semTopo = rota === 'inicio' || rota === 'ajustes' || rota === 'familia' || rota === 'ajuda';
+    var semTopo = rota === 'inicio' || rota === 'ajustes' || rota === 'familia' || rota === 'ajuda' || rota === 'postos';
 
     document.body.classList.toggle('modo-entrada', rota === 'sistema' && modo === 'login');
     if (estado.demo) {
@@ -508,7 +508,7 @@
     var nome = r.nome;
     var ativos = carrosAtivos().length;
     // Telas que funcionam mesmo sem carro ativo escolhido
-    var livre = nome === 'ajuda' || nome === 'carro' || nome === 'arquivo' || (nome === 'familia' && !estado.demo);
+    var livre = nome === 'ajuda' || nome === 'carro' || nome === 'arquivo' || nome === 'postos' || (nome === 'familia' && !estado.demo);
 
     if (!ativos && !livre) nome = 'boas-vindas';
     if (nome === 'escolher') nome = 'inicio';   // a escolha agora é a própria Garagem
@@ -530,7 +530,7 @@
     var telas = {
       'boas-vindas': telaBoasVindas, inicio: telaGaragem, painel: telaPainel,
       abastecer: telaAbastecer, manutencao: telaManutencao, historico: telaHistorico,
-      relatorios: telaRelatorios, ajustes: telaAjustes, carro: telaCarro, ajuda: telaAjuda, familia: telaFamilia,
+      relatorios: telaRelatorios, postos: telaPostos, ajustes: telaAjustes, carro: telaCarro, ajuda: telaAjuda, familia: telaFamilia,
       arquivo: telaArquivo
     };
     (telas[nome] || telaGaragem)(r.param);
@@ -1478,6 +1478,265 @@
   function ligarFiltroRel() {
     $$('[data-rel]').forEach(function (b) { b.addEventListener('click', function () { sessao.periodoRelatorio = b.getAttribute('data-rel'); desenhar(); }); });
   }
+
+  // =====================================================================
+  // Tela: Postos (preços da ANP; consulta separada do histórico da família)
+  //  - Nada aqui grava abastecimentos nem dados da família.
+  //  - A localização é pedida só ao tocar em "Buscar postos", uma vez, e fica só na memória.
+  //  - Os dados vêm de arquivos estáticos (postos/…) gerados toda semana a partir da ANP e do IBGE.
+  // =====================================================================
+  var PostosDados = { indice: undefined, municipios: {}, ceps: {} };
+  function baixarJSON(caminho) {
+    return fetch(caminho, { cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) { var e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
+      return r.json();
+    });
+  }
+  function carregarIndicePostos() {
+    if (PostosDados.indice !== undefined) return Promise.resolve(PostosDados.indice);
+    return baixarJSON('postos/indice.json').then(function (d) { PostosDados.indice = d; return d; })
+      .catch(function (e) { PostosDados.erroIndice = e; PostosDados.indice = null; return null; });
+  }
+  function carregarMunicipio(c) {
+    if (PostosDados.municipios[c]) return Promise.resolve(PostosDados.municipios[c]);
+    return baixarJSON('postos/municipios/' + c + '.json').then(function (d) { PostosDados.municipios[c] = d; return d; });
+  }
+  function estadoPostos() {
+    if (!sessao.postos) {
+      var carro = carroAtual();
+      var ab = carro ? C.ordenarAbastecimentos(abastDoCarro(carro.id)) : [];
+      var ultimo = ab[ab.length - 1];
+      var cheios = ab.filter(function (a) { return a.tanqueCheio !== false; }).slice(-5);
+      var media = carro ? C.consumoMedio(C.analisarAbastecimentos(abastDoCarro(carro.id))) : null;
+      sessao.postos = {
+        produto: Postos.produtoDoCombustivel(ultimo && ultimo.combustivel), onde: 'local', texto: '', raio: 5,
+        ordem: 'preco', soBandeira: false,
+        litros: cheios.length ? Math.round(cheios.reduce(function (s, a) { return s + a.litros; }, 0) / cheios.length) : '',
+        kmL: media ? Math.round(media.kmPorLitro * 10) / 10 : '',
+        carroNome: carro ? carro.nome : '', resultado: null, buscando: false, erro: null
+      };
+    }
+    return sessao.postos;
+  }
+  function fmtKmCurto(km) {
+    var m = Math.round(km * 100) * 10;          // metros, de 10 em 10
+    if (m < 10) return 'menos de 10 m';
+    return m < 1000 ? C.fmtNum(m) + ' m' : C.fmtNum(km, km < 9.95 ? 1 : 0) + ' km';
+  }
+
+  function telaPostos() {
+    var st = estadoPostos();
+    if (PostosDados.indice === undefined) {
+      tela.innerHTML = '<header class="cabecalho-tela"><h1>Postos</h1></header><p class="carregando">Carregando os preços da ANP…</p>';
+      carregarIndicePostos().then(function () { if (rotaAtual().nome === 'postos') desenhar(true); });
+      return;
+    }
+    var ind = PostosDados.indice;
+    var status = Postos.statusDados(ind, C.hojeISO());
+    var prod = Postos.produto(st.produto);
+    var h = '<header class="cabecalho-tela"><h1>Postos</h1><p>Compare preços de postos próximos, pesquisados pela ANP.</p></header>';
+
+    if (!ind) {
+      h += '<div class="caixa caixa-aviso"><strong>Os preços dos postos não estão disponíveis agora</strong><p style="margin:6px 0 0">' +
+        (navigator.onLine === false ? 'O celular está sem internet e os preços ainda não foram guardados neste aparelho.' :
+          'Os arquivos com os preços da ANP ainda não foram publicados neste endereço.') + ' Nenhum preço é mostrado sem dados oficiais.</p></div>' +
+        fontePostos(null);
+      tela.innerHTML = h; return;
+    }
+    h += avisoDados(ind, status);
+
+    // ---- Formulário de busca
+    h += '<form id="form-postos" class="cartao busca-postos" novalidate>' +
+      '<div class="campo"><span class="rotulo" id="rot-prod">Combustível</span><div class="opcoes" role="radiogroup" aria-labelledby="rot-prod">' +
+      Postos.PRODUTOS.map(function (p) {
+        return '<label class="opcao"><input type="radio" name="produto" value="' + p.c + '"' + (st.produto === p.c ? ' checked' : '') + '><span>' + p.nome + '</span></label>';
+      }).join('') + '</div></div>' +
+      '<div class="campo"><span class="rotulo" id="rot-onde">Onde procurar</span><div class="opcoes duas" role="radiogroup" aria-labelledby="rot-onde">' +
+      '<label class="opcao"><input type="radio" name="onde" value="local"' + (st.onde === 'local' ? ' checked' : '') + '><span>Perto de mim</span></label>' +
+      '<label class="opcao"><input type="radio" name="onde" value="texto"' + (st.onde === 'texto' ? ' checked' : '') + '><span>Cidade ou CEP</span></label></div>' +
+      (st.onde === 'local'
+        ? '<span class="dica">A localização do celular é pedida só quando você tocar em “Buscar postos”, uma vez. Ela é usada aqui no aparelho para calcular as distâncias e não é guardada.</span>'
+        : '<div class="campo-texto-postos"><label for="busca-postos" class="sr">Cidade ou CEP</label><input type="text" id="busca-postos" list="lista-cidades" autocomplete="off" value="' + esc(st.texto) + '" placeholder="Ex.: Campinas ou 13010-000">' +
+          '<datalist id="lista-cidades">' + ind.municipios.map(function (m) { return '<option value="' + esc(m.n + ' - ' + m.uf) + '">'; }).join('') + '</datalist>' +
+          '<span class="dica">A ANP pesquisa ' + C.plural(ind.municipios.length, 'cidade', 'cidades') + ' por semana. Com o CEP, as distâncias são calculadas a partir do centro do CEP.</span></div>') +
+      '</div>' +
+      '<div class="campo"' + (st.onde === 'texto' && !/\d{5}/.test(st.texto) ? ' hidden' : '') + ' id="campo-raio"><span class="rotulo" id="rot-raio">Até que distância</span><div class="opcoes" role="radiogroup" aria-labelledby="rot-raio">' +
+      [2, 5, 10, 20].map(function (r) { return '<label class="opcao"><input type="radio" name="raio" value="' + r + '"' + (st.raio === r ? ' checked' : '') + '><span>' + r + ' km</span></label>'; }).join('') +
+      '</div><span class="dica">Distância em linha reta.</span></div>' +
+      '<button class="botao botao-principal botao-grande" type="submit" id="buscar-postos"' + (st.buscando ? ' disabled' : '') + '>' + ICONES.bomba + (st.buscando ? 'Buscando…' : 'Buscar postos') + '</button>' +
+      '</form>';
+    h += '<div id="resultado-postos" aria-live="polite">' + (st.erro ? caixa('erro', st.erro) : '') + htmlResultadoPostos(st, prod) + '</div>';
+    h += fontePostos(ind);
+    tela.innerHTML = h;
+    ligarTelaPostos(st);
+  }
+
+  function avisoDados(ind, status) {
+    var periodo = ind.periodo ? C.fmtData(ind.periodo.inicio) + ' a ' + C.fmtData(ind.periodo.fim) : 'período não informado';
+    if (status.nivel === 'atual') return '<p class="selo-dados"><span class="ponto-status" aria-hidden="true"></span><span>Preços pesquisados pela ANP na semana de <strong>' + periodo + '</strong>.</span></p>';
+    return '<div class="caixa caixa-aviso"><strong>' + (status.nivel === 'antigo' ? 'Os preços podem estar desatualizados' : 'Os preços estão desatualizados') + '</strong>' +
+      '<p style="margin:6px 0 0">A última pesquisa disponível é da semana de ' + periodo + (status.dias !== null ? ' (há ' + C.plural(status.dias, 'dia', 'dias') + ')' : '') +
+      '. Os preços podem ter mudado; confira no posto.</p></div>';
+  }
+  function fontePostos(ind) {
+    return '<section class="fonte-postos"><h2>De onde vêm estes dados</h2>' +
+      '<p><strong>Preços:</strong> ANP, Levantamento de Preços de Combustíveis (preços por posto revendedor). A pesquisa é <strong>semanal e por amostragem</strong>: nem todos os postos nem todas as cidades são pesquisados, e o preço pode ter mudado depois da coleta. ' +
+      '<a href="https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas" target="_blank" rel="noopener">Página oficial da ANP</a></p>' +
+      '<p><strong>Localização dos postos:</strong> estimada pelo endereço informado à ANP, com o Cadastro Nacional de Endereços do IBGE (CNEFE 2022). Quando não dá para localizar com segurança, o posto aparece sem distância.</p>' +
+      (ind && ind.geradoEm ? '<p class="legenda-simples">Dados preparados em ' + C.fmtData(ind.geradoEm.slice(0, 10)) + '.</p>' : '') +
+      '<p class="legenda-simples">Esta consulta não grava nada nos abastecimentos da família.</p></section>';
+  }
+
+  function htmlPosto(i, unidade, destaque) {
+    var p = i.posto;
+    return '<li class="posto' + (destaque ? ' posto-destaque' : '') + '"><div class="posto-topo"><div class="posto-nome"><strong>' + esc(p.n) + '</strong>' +
+      '<span class="etiqueta">' + (p.b ? esc(p.b) : 'Sem bandeira') + '</span></div>' +
+      '<span class="posto-preco">' + C.fmtDinheiro(i.preco) + '<small>/' + unidade + '</small></span></div>' +
+      '<p class="posto-end">' + esc(p.e) + '</p>' +
+      '<p class="posto-info">' + (i.distancia !== null ? '<span class="posto-dist">' + (i.aproximada ? '≈ ' : '') + fmtKmCurto(i.distancia) + '</span>' +
+        (i.aproximada ? ' <span class="legenda-simples">(localização aproximada, pelo CEP)</span>' : '') + ' • ' : '') +
+      'Coletado em ' + C.fmtData(i.data) + '</p></li>';
+  }
+
+  function htmlResultadoPostos(st, prod) {
+    var r = st.resultado;
+    if (!r) return '';
+    var res = Postos.montarResultados(r.postos, { produto: st.produto, ponto: r.ponto, raio: st.raio, soBandeira: st.soBandeira });
+    var semFiltro = st.soBandeira ? Postos.montarResultados(r.postos, { produto: st.produto, ponto: r.ponto, raio: st.raio }) : res;
+    var rec = Postos.recomendar(res.lista, { temPonto: !!r.ponto, litros: st.litros, kmPorLitro: st.kmL });
+    var ordem = st.ordem === 'melhor' && !rec.confiavel ? 'preco' : (st.ordem === 'distancia' && !r.ponto ? 'preco' : st.ordem);
+    var lista = Postos.ordenar(res.lista, ordem, rec);
+    var h = '<section class="resultado-postos"><h2>' + (lista.length ? C.plural(lista.length, 'posto', 'postos') : 'Nenhum posto') + ' com ' + esc(prod.nome) +
+      (r.ponto ? ' até ' + st.raio + ' km' : ' em ' + esc(r.descricao)) + '</h2>' +
+      '<p class="legenda-simples">' + (r.ponto ? 'Distâncias em linha reta a partir ' + (r.descricao === 'sua localização' ? 'da ' : 'do ') + esc(r.descricao) + '.' : 'Sem ponto de partida, as distâncias não são calculadas. Para comparar distâncias, busque perto de você ou por CEP.') + '</p>';
+
+    if (!semFiltro.lista.length && !semFiltro.semLocalizacao.length) {
+      h += '<div class="vazio"><p>' + (r.ponto ? 'A ANP não pesquisou ' + esc(prod.nome.toLowerCase()) + ' em nenhum posto até ' + st.raio + ' km nesta semana.' +
+        (st.raio < 20 ? ' Tente uma distância maior.' : '') : 'A ANP não pesquisou ' + esc(prod.nome.toLowerCase()) + ' nesta cidade nesta semana.') +
+        ' Isso não quer dizer que não haja postos: a pesquisa é por amostragem.</p></div></section>';
+      return h;
+    }
+
+    h += '<div class="controles-postos"><div class="filtros" role="group" aria-label="Ordenar por">' +
+      [['preco', 'Menor preço', true], ['distancia', 'Menor distância', !!r.ponto], ['melhor', 'Melhor opção', rec.confiavel]].map(function (o) {
+        return '<button type="button" data-ordem="' + o[0] + '" aria-pressed="' + (ordem === o[0]) + '"' + (o[2] ? '' : ' disabled') + '>' + o[1] + '</button>';
+      }).join('') + '</div>' +
+      '<label class="caixa-marcar"><input type="checkbox" id="so-bandeira"' + (st.soBandeira ? ' checked' : '') + '> Só postos com bandeira</label></div>';
+    if (st.ordem === 'melhor' && !rec.confiavel) h += '<p class="legenda-simples">“Melhor opção” precisa da distância e do consumo do carro; os postos estão por menor preço.</p>';
+
+    h += htmlRecomendacao(st, rec, prod, !!r.ponto);
+    if (lista.length) h += '<ul class="lista-postos">' + lista.map(function (i) { return htmlPosto(i, prod.un, rec.confiavel && rec.compensa && i === rec.melhor.item); }).join('') + '</ul>';
+    else h += '<div class="vazio"><p>Nenhum posto com bandeira neste raio. Desligue o filtro para ver os ' + C.plural(semFiltro.lista.length, 'posto', 'postos') + ' sem bandeira.</p></div>';
+    if (res.semLocalizacao.length) {
+      h += '<details class="mais sem-localizacao"><summary>' + C.plural(res.semLocalizacao.length, 'posto', 'postos') + ' da região sem localização exata</summary>' +
+        '<p class="legenda-simples">Não foi possível localizar estes endereços com segurança, então a distância não é mostrada.</p>' +
+        '<ul class="lista-postos">' + Postos.ordenar(res.semLocalizacao, 'preco').map(function (i) { return htmlPosto(i, prod.un); }).join('') + '</ul></details>';
+    }
+    return h + '</section>';
+  }
+
+  function htmlRecomendacao(st, rec, prod, temPonto) {
+    if (!temPonto) return '';
+    var un = prod.un;
+    var campos = '<details class="mais conta-postos"' + (rec.confiavel ? '' : ' open') + '><summary>Como a conta é feita</summary>' +
+      '<div class="campos-lado">' +
+      campoNumero('litros-postos', 'Quanto vai abastecer', st.litros === '' ? '' : textoNumero(st.litros), un === 'm³' ? 'm³' : 'litros', '', { placeholder: 'Ex.: 40' }) +
+      campoNumero('kml-postos', 'Consumo do carro', st.kmL === '' ? '' : textoNumero(st.kmL, 1), 'km/' + (un === 'm³' ? 'm³' : 'L'), '', { placeholder: 'Ex.: 11' }) +
+      '</div><p class="legenda-simples">' + (st.carroNome ? 'Sugestões tiradas do histórico do carro ' + esc(st.carroNome) + '. ' : '') +
+      'Para cada posto: preço × quantidade + o combustível gasto para ir e voltar. A distância em linha reta é multiplicada por ' + C.fmtNum(Postos.FATOR_ROTA, 1) +
+      ' para estimar o caminho de carro. É uma estimativa: trânsito, caminho real e filas não entram na conta.</p></details>';
+    if (!rec.confiavel) {
+      var motivo = { semLitros: 'Informe quanto vai abastecer', semConsumo: 'Informe o consumo do carro', poucosPostos: 'São necessários pelo menos dois postos com localização precisa' }[rec.motivo] || '';
+      return '<div class="recomendacao recomendacao-sem"><strong>Sem estimativa de economia</strong><p>' + motivo +
+        ' para comparar preço e distância. Enquanto isso, veja o preço e a distância de cada posto abaixo.</p>' + campos + '</div>';
+    }
+    var ref = rec.referencia.item, mel = rec.melhor.item;
+    var texto;
+    if (rec.mesmoPosto) {
+      texto = '<strong>O posto mais próximo já sai mais em conta.</strong> Considerando ' + C.fmtNum(rec.litros) + ' ' + (un === 'm³' ? 'm³' : 'litros') +
+        ' e o combustível para ir e voltar, nenhum posto mais longe compensa: <strong>' + esc(ref.posto.n) + '</strong>, a ' + fmtKmCurto(ref.distancia) + ', por ' + C.fmtDinheiro(ref.preco) + '/' + un + '.';
+    } else if (rec.compensa) {
+      texto = '<strong>Pode compensar ir até ' + esc(mel.posto.n) + '</strong> (' + fmtKmCurto(mel.distancia) + ', ' + C.fmtDinheiro(mel.preco) + '/' + un + ').<br>' +
+        'Comparado ao mais próximo (' + esc(ref.posto.n) + ', ' + fmtKmCurto(ref.distancia) + ', ' + C.fmtDinheiro(ref.preco) + '/' + un + '): ' +
+        'economia de <strong>' + C.fmtDinheiro(rec.economiaPreco) + '</strong> no abastecimento, menos cerca de <strong>' + C.fmtDinheiro(rec.custoExtra) + '</strong> de combustível no caminho a mais. ' +
+        'Economia estimada: <strong>' + C.fmtDinheiro(rec.economiaLiquida) + '</strong>.';
+    } else {
+      texto = '<strong>A diferença é pequena.</strong> O menor custo estimado é em ' + esc(mel.posto.n) + ' (' + fmtKmCurto(mel.distancia) + '), mas a economia em relação ao mais próximo fica abaixo de ' +
+        C.fmtDinheiro(Postos.ECONOMIA_MINIMA) + ' (' + C.fmtDinheiro(rec.economiaLiquida) + '). Vale escolher o que for mais prático.';
+    }
+    return '<div class="recomendacao"><p>' + texto + '</p><p class="legenda-simples">Critério: menor custo total estimado (abastecimento + ida e volta). Os preços são da pesquisa da ANP e podem ter mudado.</p>' + campos + '</div>';
+  }
+
+  function ligarTelaPostos(st) {
+    var form = $('#form-postos');
+    $$('input[name=produto]').forEach(function (i) { i.addEventListener('change', function () { st.produto = i.value; desenhar(true); }); });
+    $$('input[name=onde]').forEach(function (i) { i.addEventListener('change', function () { st.onde = i.value; st.erro = null; desenhar(true); }); });
+    $$('input[name=raio]').forEach(function (i) { i.addEventListener('change', function () { st.raio = Number(i.value); if (st.resultado && st.resultado.ponto) atualizarBuscaRaio(st); else desenhar(true); }); });
+    if ($('#busca-postos')) $('#busca-postos').addEventListener('input', function () {
+      st.texto = this.value; $('#campo-raio').hidden = !/\d{5}/.test(this.value);
+    });
+    form.addEventListener('submit', function (ev) { ev.preventDefault(); buscarPostos(st); });
+    $$('[data-ordem]').forEach(function (b) { b.addEventListener('click', function () { st.ordem = b.getAttribute('data-ordem'); desenhar(true); }); });
+    if ($('#so-bandeira')) $('#so-bandeira').addEventListener('change', function () { st.soBandeira = this.checked; desenhar(true); });
+    [['#litros-postos', 'litros'], ['#kml-postos', 'kmL']].forEach(function (par) {
+      var el = $(par[0]); if (!el) return;
+      el.addEventListener('change', function () { var n = C.lerNumero(el.value); st[par[1]] = n > 0 ? n : ''; desenhar(true); });
+    });
+  }
+
+  function erroPostos(st, msg) { st.buscando = false; st.erro = msg; st.resultado = null; desenhar(true); }
+
+  function buscarPostos(st) {
+    var ind = PostosDados.indice;
+    st.erro = null;
+    if (st.onde === 'local') {
+      if (!navigator.geolocation) return erroPostos(st, 'Este navegador não consegue informar a localização. Use “Cidade ou CEP”.');
+      st.buscando = true; desenhar(true);
+      // Um pedido só, quando a pessoa toca em "Buscar postos". Nada é acompanhado em segundo plano.
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        buscarPerto(st, { la: pos.coords.latitude, lo: pos.coords.longitude }, 'sua localização');
+      }, function (e) {
+        erroPostos(st, e && e.code === 1 ? 'Sem permissão para usar a localização. Você pode autorizar nas configurações do navegador ou buscar por cidade ou CEP.'
+          : 'Não foi possível obter a localização agora. Tente de novo ou busque por cidade ou CEP.');
+      }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+      return;
+    }
+    var q = Postos.interpretarBusca(st.texto, ind.municipios);
+    if (q.tipo === 'vazio') return erroPostos(st, 'Digite o nome da cidade ou o CEP.');
+    if (q.tipo === 'invalido') return erroPostos(st, q.motivo);
+    st.buscando = true; desenhar(true);
+    if (q.tipo === 'cep') {
+      var pre = q.cep.slice(0, 3);
+      var tabela = PostosDados.ceps[pre] ? Promise.resolve(PostosDados.ceps[pre]) :
+        baixarJSON('postos/cep/' + pre + '.json').then(function (t) { PostosDados.ceps[pre] = t; return t; }).catch(function (e) { if (e.status === 404) return {}; throw e; });
+      tabela.then(function (t) {
+        var c = t[q.cep];
+        if (!c) return erroPostos(st, 'O CEP ' + q.cep.slice(0, 5) + '-' + q.cep.slice(5) + ' não está nas cidades pesquisadas pela ANP nesta semana (ou não foi encontrado). Tente a cidade mais próxima.');
+        buscarPerto(st, { la: c[0], lo: c[1] }, 'CEP ' + q.cep.slice(0, 5) + '-' + q.cep.slice(5));
+      }).catch(function () { erroPostos(st, 'Não foi possível consultar o CEP agora. Confira a internet.'); });
+      return;
+    }
+    if (!q.candidatos.length) return erroPostos(st, 'A ANP não pesquisou “' + q.nome + '” nesta semana. Confira o nome ou tente uma cidade próxima: a lista aparece ao digitar.');
+    if (q.candidatos.length > 1) return erroPostos(st, 'Existe mais de uma cidade com esse nome. Escreva também o estado, por exemplo: ' + q.candidatos.map(function (m) { return m.n + ' - ' + m.uf; }).join(' ou ') + '.');
+    var m = q.candidatos[0];
+    carregarMunicipio(m.c).then(function (d) {
+      st.buscando = false; st.ordem = st.ordem === 'distancia' ? 'preco' : st.ordem;
+      st.resultado = { ponto: null, descricao: m.n + ' - ' + m.uf, postos: d.postos, municipios: [m.c] };
+      desenhar(true);
+    }).catch(function () { erroPostos(st, 'Não foi possível baixar os preços desta cidade agora. Confira a internet.'); });
+  }
+
+  function buscarPerto(st, ponto, descricao) {
+    var perto = Postos.municipiosProximos(ponto, PostosDados.indice.municipios, 20);
+    Promise.all(perto.map(function (m) { return carregarMunicipio(m.c); })).then(function (lista) {
+      var postos = [];
+      lista.forEach(function (d) { postos = postos.concat(d.postos); });
+      st.buscando = false;
+      st.resultado = { ponto: ponto, descricao: descricao, postos: postos, municipios: perto.map(function (m) { return m.c; }) };
+      desenhar(true);
+    }).catch(function () { erroPostos(st, 'Não foi possível baixar os preços agora. Confira a internet.'); });
+  }
+  function atualizarBuscaRaio(st) { desenhar(true); }
 
   // =====================================================================
   // Tela: ajustes

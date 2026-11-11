@@ -20,6 +20,7 @@ const DONO = { Authorization: 'Bearer owner', 'content-type': 'application/json'
 const RAIZ = fileURLToPath(new URL('..', import.meta.url));
 
 // ---------- servidor do site, com a configuração apontando para os emuladores ----------
+const estadoPostos = { modo: 'atual' };   // índice dos postos: 'atual' | 'antigo' | 'desatualizado' | 'ausente'
 const TIPOS = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 const servidor = createServer(async (req, res) => {
   const caminho = decodeURIComponent(new URL(req.url, 'http://x').pathname);
@@ -28,6 +29,22 @@ const servidor = createServer(async (req, res) => {
     return res.end(`window.FIREBASE_CONFIG = { apiKey: 'x', authDomain: '${PROJ}.firebaseapp.com', projectId: '${PROJ}', appId: '1:1:web:1', emulador: true };`);
   }
   if (caminho === '/sw.js') { res.writeHead(404); return res.end(); } // sem cache entre testes
+  if (caminho === '/postos/indice.json') {
+    if (estadoPostos.modo === 'ausente') { res.writeHead(404); return res.end(); }
+    const dias = { atual: 3, antigo: 15, desatualizado: 40 }[estadoPostos.modo];
+    const fim = new Date(Date.now() - dias * 86400000), inicio = new Date(fim.getTime() - 6 * 86400000);
+    const iso = (d) => d.toISOString().slice(0, 10);
+    const corpo = (await readFile(join(RAIZ, 'testes/postos-exemplo/indice.modelo.json'), 'utf8'))
+      .replace('__INICIO__', iso(inicio)).replace('__FIM__', iso(fim)).replace('__GERADO__', new Date().toISOString());
+    res.writeHead(200, { 'content-type': 'application/json' }); return res.end(corpo);
+  }
+  if (caminho.startsWith('/postos/')) {
+    try {
+      const arq = normalize(join(RAIZ, 'testes/postos-exemplo', caminho.slice(8)));
+      if (!arq.startsWith(join(RAIZ, 'testes/postos-exemplo'))) throw new Error('fora');
+      const corpo = await readFile(arq); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(corpo);
+    } catch { res.writeHead(404); return res.end(); }
+  }
   try {
     const arq = normalize(join(RAIZ, caminho === '/' ? 'index.html' : caminho));
     if (!arq.startsWith(RAIZ)) throw new Error('fora');
@@ -838,6 +855,161 @@ await teste('combustíveis diferentes no período: nada de média combinada no r
   assert.doesNotMatch(resumo, /Preço médio/, 'Histórico também não mistura combustíveis');
   assert.doesNotMatch(resumo, /R\$ 5,61/);
   await fetch(`${FS}/familias/AP/abastecimentos/etanol1`, { method: 'DELETE', headers: DONO });
+});
+
+// ---------- Postos (dados FICTÍCIOS em testes/postos-exemplo) ----------
+const PONTO_EXEMPLO = { latitude: -22.9, longitude: -47.06 };
+async function paginaPostos(opcoes = {}) {
+  const ctx = await navegador.newContext({ viewport: { width: 390, height: 844 }, geolocation: opcoes.geolocation || PONTO_EXEMPLO,
+    permissions: opcoes.semPermissao ? [] : ['geolocation'], reducedMotion: 'reduce' });
+  // conta os pedidos de localização (só pode haver um, quando a pessoa toca em "Buscar postos")
+  await ctx.addInitScript(() => {
+    window.__pedidosLocalizacao = 0; window.__acompanhamentos = 0;
+    const g = navigator.geolocation, orig = g.getCurrentPosition.bind(g);
+    g.getCurrentPosition = (...a) => { window.__pedidosLocalizacao++; return orig(...a); };
+    g.watchPosition = () => { window.__acompanhamentos++; return 0; };
+  });
+  const q = await ctx.newPage(); q.errosJs = []; q.on('pageerror', e => q.errosJs.push(e.message));
+  await q.goto(SITE); await q.waitForSelector('#form-login', { timeout: 30000 });
+  await q.click('[data-acao=demo]'); await q.waitForSelector('.garagem');
+  await q.click('#menu a[data-rota=postos]'); await q.waitForSelector('#form-postos, .tela .caixa-aviso');
+  return q;
+}
+const idsPostos = (q, sel = '.resultado-postos > .lista-postos .posto') => q.locator(sel + ' .posto-nome strong').allTextContents();
+async function contaFixa(q, litros, kml) {
+  await q.click('.conta-postos summary').catch(() => {});
+  await q.fill('#litros-postos', litros); await q.press('#litros-postos', 'Tab');
+  if (!(await q.isVisible('#kml-postos'))) await q.click('.conta-postos summary');
+  await q.fill('#kml-postos', kml); await q.press('#kml-postos', 'Tab');
+  await q.waitForTimeout(100);
+}
+
+await teste('Postos: está no menu e só pede a localização ao tocar em "Buscar postos"', async () => {
+  estadoPostos.modo = 'atual';
+  const q = await paginaPostos();
+  assert.deepEqual(await q.locator('#menu a').allTextContents(), ['Garagem', 'Histórico', 'Relatórios', 'Postos', 'Ajustes']);
+  assert.equal(await q.locator('#menu a.ativo').textContent(), 'Postos');
+  assert.equal(await q.evaluate(() => window.__pedidosLocalizacao), 0, 'abrir a tela não pede a localização');
+  assert.match(await q.textContent('.selo-dados'), /Preços pesquisados pela ANP na semana de/);
+  assert.match(await q.textContent('.fonte-postos'), /semanal e por amostragem/);
+  await q.click('#buscar-postos'); await q.waitForSelector('.resultado-postos');
+  assert.equal(await q.evaluate(() => window.__pedidosLocalizacao), 1, 'um pedido, no toque');
+  assert.equal(await q.evaluate(() => window.__acompanhamentos), 0, 'nada de acompanhar em segundo plano');
+  assert.equal(await q.evaluate(() => Object.keys(localStorage).filter(k => /local|posto/i.test(k)).length), 0, 'a localização não é guardada');
+  assert.deepEqual(q.errosJs, []);
+  await q.context().close();
+});
+
+await teste('Postos: raio, ordenação por preço e por distância, e postos sem localização à parte', async () => {
+  const q = await paginaPostos();
+  await q.click('#buscar-postos'); await q.waitForSelector('.resultado-postos');
+  assert.match(await q.textContent('.resultado-postos h2'), /3 postos com Gasolina comum até 5 km/);
+  assert.deepEqual((await idsPostos(q)).sort(), ['Posto Exemplo Aproximado', 'Posto Exemplo Meio', 'Posto Exemplo Perto'], 'o posto a 8 km fica fora do raio de 5 km');
+  await q.click('.opcao:has(input[name=raio][value="10"])'); await q.waitForSelector('.resultado-postos h2:has-text("até 10 km")');
+  await q.click('[data-ordem=preco]');
+  assert.deepEqual(await idsPostos(q), ['Posto Exemplo Longe', 'Posto Exemplo Meio', 'Posto Exemplo Aproximado', 'Posto Exemplo Perto'], 'menor preço');
+  await q.click('[data-ordem=distancia]');
+  assert.deepEqual(await idsPostos(q), ['Posto Exemplo Perto', 'Posto Exemplo Aproximado', 'Posto Exemplo Meio', 'Posto Exemplo Longe'], 'menor distância');
+  const perto = (await q.textContent('.resultado-postos > .lista-postos .posto >> nth=0')).replace(/\s+/g, ' ');
+  assert.match(perto, /Posto Exemplo Perto\s*Bandeira A\s*R\$ 6,29\/L\s*Rua Exemplo, 10 - Centro\s*500 m • Coletado em 04\/11\/2026/, 'nome, bandeira, preço, endereço, distância e data');
+  assert.match(await q.textContent('.posto:has-text("Aproximado")'), /≈ 1,0 km.*aproximada/);
+  assert.match(await q.textContent('.sem-localizacao summary'), /1 posto da região sem localização exata/);
+  assert.match(await q.textContent('.sem-localizacao'), /Posto Exemplo Sem Local/);
+  await q.context().close();
+});
+
+await teste('Postos: filtro "Só postos com bandeira" vem desligado e não some com os demais', async () => {
+  const q = await paginaPostos();
+  await q.click('.opcao:has(input[name=raio][value="10"])'); await q.click('#buscar-postos'); await q.waitForSelector('.resultado-postos');
+  assert.equal(await q.isChecked('#so-bandeira'), false);
+  assert.equal((await idsPostos(q)).length, 4);
+  await q.check('#so-bandeira'); await q.waitForTimeout(100);
+  assert.deepEqual((await idsPostos(q)).sort(), ['Posto Exemplo Aproximado', 'Posto Exemplo Longe', 'Posto Exemplo Perto']);
+  await q.uncheck('#so-bandeira'); await q.waitForTimeout(100);
+  assert.equal((await idsPostos(q)).length, 4);
+  await q.context().close();
+});
+
+await teste('Postos: recomendação explica o critério e as contas (preço × litros + ida e volta)', async () => {
+  const q = await paginaPostos();
+  await q.click('.opcao:has(input[name=raio][value="10"])'); await q.click('#buscar-postos'); await q.waitForSelector('.recomendacao');
+  await contaFixa(q, '40', '10');
+  const t = (await q.textContent('.recomendacao')).replace(/\s+/g, ' ');
+  assert.match(t, /Pode compensar ir até Posto Exemplo Longe \(8,0 km, R\$ 5,79\/L\)/);
+  assert.match(t, /Comparado ao mais próximo \(Posto Exemplo Perto, 500 m, R\$ 6,29\/L\)/);
+  assert.match(t, /economia de R\$ 20,00 no abastecimento, menos cerca de R\$ 11,23 de combustível no caminho a mais/);
+  assert.match(t, /Economia estimada: R\$ 8,77/);
+  assert.match(t, /Critério: menor custo total estimado/);
+  await q.click('[data-ordem=melhor]');
+  assert.deepEqual(await idsPostos(q), ['Posto Exemplo Longe', 'Posto Exemplo Meio', 'Posto Exemplo Perto', 'Posto Exemplo Aproximado']);
+  assert.equal(await q.locator('.posto-destaque').count(), 1);
+  // pouco combustível: não compensa ir longe
+  await contaFixa(q, '5', '8');
+  assert.match(await q.textContent('.recomendacao'), /O posto mais próximo já sai mais em conta/);
+  // sem consumo: não recomenda e mostra preço e distância separados
+  await contaFixa(q, '40', '');
+  assert.match(await q.textContent('.recomendacao'), /Sem estimativa de economia.*Informe o consumo do carro/s);
+  assert.equal(await q.isDisabled('[data-ordem=melhor]'), true);
+  assert.equal(await q.locator('.posto-destaque').count(), 0, 'sem destaque de "melhor"');
+  await q.context().close();
+});
+
+await teste('Postos: busca por cidade (sem distância) e por CEP; cidade e CEP fora da pesquisa', async () => {
+  const q = await paginaPostos();
+  await q.click('.opcao:has(input[name=onde][value=texto])');
+  await q.fill('#busca-postos', 'outra cidade'); await q.click('#buscar-postos');
+  await q.waitForSelector('.resultado-postos');
+  assert.match(await q.textContent('.resultado-postos h2'), /1 posto com Gasolina comum em Outra Cidade - SP/);
+  assert.equal(await q.isDisabled('[data-ordem=distancia]'), true);
+  assert.equal(await q.isDisabled('[data-ordem=melhor]'), true);
+  assert.equal(await q.locator('.posto-dist').count(), 0, 'sem distância inventada');
+  assert.equal(await q.evaluate(() => window.__pedidosLocalizacao), 0, 'busca por texto não pede a localização');
+  await q.fill('#busca-postos', '13010-000'); await q.click('#buscar-postos');
+  await q.waitForSelector('.resultado-postos h2:has-text("até")');
+  assert.match(await q.textContent('.resultado-postos'), /a partir do CEP 13010-000/);
+  await q.fill('#busca-postos', '99999-999'); await q.click('#buscar-postos'); await q.waitForSelector('#resultado-postos .caixa-erro');
+  assert.match(await q.textContent('#resultado-postos'), /não está nas cidades pesquisadas pela ANP/);
+  await q.fill('#busca-postos', 'Cidade Inventada'); await q.click('#buscar-postos'); await q.waitForSelector('#resultado-postos .caixa-erro');
+  assert.match(await q.textContent('#resultado-postos'), /A ANP não pesquisou “Cidade Inventada”/);
+  assert.equal(await q.locator('.posto').count(), 0, 'nenhum preço inventado');
+  await q.context().close();
+});
+
+await teste('Postos: nenhum resultado na região e localização negada', async () => {
+  const q = await paginaPostos({ geolocation: { latitude: -10, longitude: -60 } });
+  await q.click('#buscar-postos'); await q.waitForSelector('.resultado-postos .vazio');
+  assert.match(await q.textContent('.resultado-postos'), /A ANP não pesquisou gasolina comum em nenhum posto até 5 km.*amostragem/s);
+  await q.context().close();
+  const n = await paginaPostos({ semPermissao: true });
+  await n.click('#buscar-postos'); await n.waitForSelector('#resultado-postos .caixa-erro');
+  assert.match(await n.textContent('#resultado-postos'), /Sem permissão para usar a localização/);
+  await n.context().close();
+});
+
+await teste('Postos: dados antigos, desatualizados ou ausentes são avisados (sem inventar valores)', async () => { try {
+  estadoPostos.modo = 'antigo';
+  let q = await paginaPostos();
+  assert.match(await q.textContent('.tela'), /Os preços podem estar desatualizados.*há 15 dias/s);
+  await q.context().close();
+  estadoPostos.modo = 'desatualizado';
+  q = await paginaPostos();
+  assert.match(await q.textContent('.tela'), /Os preços estão desatualizados.*há 40 dias/s);
+  await q.context().close();
+  estadoPostos.modo = 'ausente';
+  q = await paginaPostos();
+  assert.match(await q.textContent('.tela'), /não estão disponíveis agora/);
+  assert.equal(await q.locator('#form-postos, .posto').count(), 0, 'sem busca nem preços sem dados oficiais');
+  await q.context().close();
+} finally { estadoPostos.modo = 'atual'; } });
+
+await teste('Postos: consultar não grava nada nos abastecimentos da família', async () => {
+  const antes = JSON.stringify([await listar('familias/AP/abastecimentos'), await listar('familias/AP/veiculos'), await listar('familias/AP/manutencoes')]);
+  await ir(ap, '#postos'); await ap.waitForSelector('#form-postos');
+  await ap.click('.opcao:has(input[name=onde][value=texto])');
+  await ap.fill('#busca-postos', 'Cidade Exemplo'); await ap.click('#buscar-postos'); await ap.waitForSelector('.resultado-postos');
+  await ap.waitForTimeout(800);
+  const depois = JSON.stringify([await listar('familias/AP/abastecimentos'), await listar('familias/AP/veiculos'), await listar('familias/AP/manutencoes')]);
+  assert.equal(depois, antes);
 });
 
 await teste('nenhum erro de JavaScript nas telas novas', async () => assert.deepEqual(ap.errosJs, []));
