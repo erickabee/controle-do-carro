@@ -64,7 +64,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .cnefe
-          key: postos-cnefe-v1-${{ github.run_id }}
+          key: postos-cnefe-v1-restaurar
           restore-keys: postos-cnefe-v1-
       - name: Gerar os dados de postos (ANP + IBGE)
         id: gerar
@@ -91,12 +91,13 @@ jobs:
           name: dados-postos
           path: postos-publicar
           retention-days: 14
+      # Só guarda uma cópia nova quando algo mudou (posto novo localizado): a chave depende do conteúdo.
       - name: Guardar o cache do IBGE para a próxima semana
-        if: always()
+        if: ${{ always() && steps.gerar.outcome == 'success' && hashFiles('.cnefe/coordenadas.json') != '' }}
         uses: actions/cache/save@v4
         with:
           path: .cnefe
-          key: postos-cnefe-v1-${{ github.run_id }}
+          key: postos-cnefe-v1-${{ hashFiles('.cnefe/coordenadas.json', '.cnefe/centros/*.json') }}
 
   publicar:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
