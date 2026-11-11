@@ -170,7 +170,17 @@ A direção é “painel de bordo”, com a paleta “grafite e ardósia”: a l
 
 **Localização dos postos:** [CNEFE 2022 do IBGE](https://ftp.ibge.gov.br/Cadastro_Nacional_de_Enderecos_para_Fins_Estatisticos/Censo_Demografico_2022/Arquivos_CNEFE/CSV/Municipio/), que traz CEP, logradouro, número, latitude e longitude de cada endereço, um arquivo por município. Ordem de busca: mesmo CEP e número; mesma rua com o número mais próximo (até 100 de diferença); centro do CEP quando o CEP é pequeno (até 1,5 km); se nada disso servir, o posto fica sem distância. Numa amostra de 56 postos (Campinas, Canoas e Montes Claros): 66% localizados pelo endereço, 7% pelo CEP e 25% sem localização.
 
-**Geração:** [`scripts/postos/gerar_postos.py`](../scripts/postos/gerar_postos.py) roda na publicação (e toda terça-feira, pelo agendamento do workflow), grava arquivos estáticos em `postos/` e guarda os arquivos do IBGE e as coordenadas já calculadas no cache do GitHub Actions. Sem serviços pagos, chaves ou backend; o Firebase e as regras não mudam.
+**Geração:** [`scripts/postos/gerar_postos.py`](../scripts/postos/gerar_postos.py) grava arquivos estáticos em `postos/` e guarda os arquivos do IBGE, os centros de CEP e as coordenadas já calculadas no cache do GitHub Actions (o CNEFE é de 2022 e não muda: cada município só é relido quando aparece posto novo ou endereço mudou). Sem serviços pagos, chaves ou backend; o Firebase e as regras não mudam.
+
+**Atualização semanal** (job `dados-postos` do workflow [`publicar.yml`](../.github/workflows/publicar.yml)):
+- roda toda **terça-feira às 9h17 (Brasília)**, a cada envio ao `main` e quando alguém toca em **Actions → Testar e publicar → Run workflow** (atualização ou recuperação extraordinária). Em outro branch, gera e confere sem publicar;
+- [`scripts/postos/preparar_publicacao.py`](../scripts/postos/preparar_publicacao.py) confere os dados novos: semana pesquisada (não pode ser mais antiga que a publicada nem no futuro), pelo menos 1.000 postos e 100 municípios, pelo menos 40% dos postos localizados pelo endereço, nada muito menor que a publicação anterior (70%) e todos os arquivos legíveis;
+- se a ANP ou o IBGE falharem, ou os dados não passarem na conferência, **mantém os últimos dados válidos** do próprio site, com a data da última atualização bem-sucedida, e o app avisa que a tentativa não trouxe dados novos;
+- se não houver nenhum dado válido (nem novo nem anterior), o job falha e **o site não é publicado**;
+- o resumo da execução (aba *Summary*) mostra a semana, quantos postos, quanto tempo levou e o tamanho dos dados;
+- **atenção:** o GitHub desliga agendamentos de repositórios públicos depois de 60 dias sem atividade no repositório. Se isso acontecer, o GitHub mostra o aviso na aba Actions e basta reativar o workflow ali (*Enable workflow*). O app avisa quando os preços ficam antigos (mais de 10 e de 21 dias).
+
+**Condições de uso:** os dois conjuntos são dados abertos de órgãos federais, e a regra que encontramos é **citar a fonte**: a ANP publica a pesquisa como dado aberto (Decreto nº 8.777/2016) e o IBGE pede a citação do IBGE como fonte. A tela Postos cita as duas fontes, com o link da página da ANP. Não encontramos o texto de uma licença formal para a planilha semanal da ANP nem para o CNEFE.
 
 **No aparelho:** a localização é pedida uma vez, ao tocar em “Buscar postos”, e fica só na memória. As distâncias são em linha reta, calculadas no próprio celular, que baixa só os arquivos das cidades próximas. O custo do deslocamento usa a distância × 1,3 (caminho de carro), ida e volta, com o consumo do carro.
 
