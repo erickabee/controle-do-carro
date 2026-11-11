@@ -31,12 +31,14 @@ const servidor = createServer(async (req, res) => {
   if (caminho === '/sw.js') { res.writeHead(404); return res.end(); } // sem cache entre testes
   if (caminho === '/postos/indice.json') {
     if (estadoPostos.modo === 'ausente') { res.writeHead(404); return res.end(); }
-    const dias = { atual: 3, antigo: 15, desatualizado: 40 }[estadoPostos.modo];
+    const dias = { atual: 3, antigo: 15, desatualizado: 40, falhou: 3 }[estadoPostos.modo];
     const fim = new Date(Date.now() - dias * 86400000), inicio = new Date(fim.getTime() - 6 * 86400000);
     const iso = (d) => d.toISOString().slice(0, 10);
     const corpo = (await readFile(join(RAIZ, 'testes/postos-exemplo/indice.modelo.json'), 'utf8'))
-      .replace('__INICIO__', iso(inicio)).replace('__FIM__', iso(fim)).replace('__GERADO__', new Date().toISOString());
-    res.writeHead(200, { 'content-type': 'application/json' }); return res.end(corpo);
+      .replace('__INICIO__', iso(inicio)).replace('__FIM__', iso(fim)).replace('__GERADO__', iso(fim) + 'T12:00:00+00:00');
+    const ind = JSON.parse(corpo);
+    if (estadoPostos.modo === 'falhou') ind.atualizacao = { ultimaTentativa: new Date().toISOString(), ok: false, motivo: 'teste' };
+    res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(ind));
   }
   if (caminho.startsWith('/postos/')) {
     try {
@@ -994,6 +996,13 @@ await teste('Postos: dados antigos, desatualizados ou ausentes são avisados (se
   estadoPostos.modo = 'desatualizado';
   q = await paginaPostos();
   assert.match(await q.textContent('.tela'), /Os preços estão desatualizados.*há 40 dias/s);
+  await q.context().close();
+  estadoPostos.modo = 'falhou';
+  q = await paginaPostos();
+  const aviso = (await q.textContent('.tela .caixa-aviso')).replace(/\s+/g, ' ');
+  assert.match(aviso, /não conseguiu dados novos e válidos da ANP; estes são os da última atualização bem-sucedida, de \d\d\/\d\d\/\d{4}/);
+  assert.match(await q.textContent('.fonte-postos'), /Última atualização bem-sucedida: \d\d\/\d\d\/\d{4}/);
+  assert.ok(await q.isVisible('#form-postos'), 'continua dando para buscar nos últimos dados válidos');
   await q.context().close();
   estadoPostos.modo = 'ausente';
   q = await paginaPostos();

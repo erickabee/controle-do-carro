@@ -5,7 +5,7 @@
   "description": "Aplicativo para acompanhar abastecimentos e manutenções de carros da família (Firebase).",
   "license": "MIT",
   "scripts": {
-    "test": "node testes/calculos.test.js && node testes/marcas.test.js && node testes/datas.test.js && node testes/postos.test.js",
+    "test": "node testes/calculos.test.js && node testes/marcas.test.js && node testes/datas.test.js && node testes/postos.test.js && node testes/publicacao-postos.test.mjs",
     "test:regras": "firebase emulators:exec --only firestore --project demo-controle-do-carro \"node testes/regras.test.mjs\"",
     "test:telas": "firebase emulators:exec --only firestore,auth --project demo-controle-do-carro \"node testes/telas.test.mjs\""
   },

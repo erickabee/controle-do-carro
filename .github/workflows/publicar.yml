@@ -4,9 +4,16 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Execução manual (Actions → Testar e publicar → Run workflow): atualização ou recuperação
+  # extraordinária. Em outro branch, gera e confere os dados sem publicar nada.
   workflow_dispatch:
-  # Toda terça-feira: a ANP publica a pesquisa da semana anterior na segunda-feira.
-  # Republica o site com os preços dos postos atualizados (tela Postos).
+    inputs:
+      simular_falha_da_fonte:
+        description: 'Teste: fingir que a ANP/IBGE está fora do ar (deve manter os últimos dados válidos)'
+        type: boolean
+        default: false
+  # Toda terça-feira, 9h17 (Brasília): a ANP publica a pesquisa da semana anterior na segunda-feira.
+  # O GitHub só roda agendamentos do branch principal (main).
   schedule:
     - cron: '17 12 * * 2'
 
@@ -40,9 +47,60 @@ jobs:
       - name: Testes de tela (navegador + emuladores)
         run: npm run test:telas
 
+  # Tela Postos: preços da ANP (planilha semanal oficial) + localização pelo CNEFE 2022 do IBGE.
+  # Sem serviços pagos nem chaves. Gera arquivos estáticos, confere e decide:
+  # dados novos válidos -> publica; senão -> mantém os últimos dados válidos do site;
+  # sem nenhum dado válido -> falha e o site NÃO é publicado.
+  dados-postos:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Recuperar os arquivos do IBGE e as coordenadas já calculadas
+        uses: actions/cache/restore@v4
+        with:
+          path: .cnefe
+          key: postos-cnefe-v1-${{ github.run_id }}
+          restore-keys: postos-cnefe-v1-
+      - name: Gerar os dados de postos (ANP + IBGE)
+        id: gerar
+        if: ${{ !inputs.simular_falha_da_fonte }}
+        continue-on-error: true
+        run: |
+          pip install --quiet openpyxl==3.1.5
+          rm -f .cnefe/revendas.xlsx
+          inicio=$(date +%s)
+          python3 scripts/postos/gerar_postos.py --saida novo-postos --cnefe .cnefe --cache .cnefe/coordenadas.json
+          echo "Geração: $(( ($(date +%s) - inicio) / 60 )) min" >> "$GITHUB_STEP_SUMMARY"
+      - name: Conferir e escolher os dados (novos ou os últimos válidos)
+        run: python3 scripts/postos/preparar_publicacao.py --novo novo-postos --saida postos-publicar --site https://controlecarro.web.app
+      - name: Tamanho dos dados
+        if: always()
+        run: |
+          {
+            echo "### Tamanho"
+            [ -d postos-publicar ] && echo "- Dados para o site: $(du -sh postos-publicar | cut -f1) em $(find postos-publicar -type f | wc -l) arquivos"
+            [ -d .cnefe ] && echo "- Cache do IBGE no GitHub Actions: $(du -sh .cnefe | cut -f1)"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dados-postos
+          path: postos-publicar
+          retention-days: 14
+      - name: Guardar o cache do IBGE para a próxima semana
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .cnefe
+          key: postos-cnefe-v1-${{ github.run_id }}
+
   publicar:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: testes
+    needs: [testes, dados-postos]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -71,24 +129,13 @@ jobs:
         run: |
           mkdir _site
           cp -r index.html css js img manifest.webmanifest sw.js favicon.ico favicon-32.png icone-180.png icone-192.png icone-512.png icone-maskable-512.png firebase-config.js _site/
-      # Tela Postos: preços da ANP (planilha semanal oficial) + localização pelo CNEFE do IBGE.
-      # Arquivos estáticos em _site/postos/. Sem serviços pagos nem chaves. Se a ANP ou o IBGE
-      # estiverem fora do ar, o resto do site é publicado e a tela Postos avisa que não há dados.
-      - uses: actions/setup-python@v5
+      - name: Trazer os dados de postos conferidos
+        uses: actions/download-artifact@v4
         with:
-          python-version: '3.12'
-      - name: Guardar os arquivos do IBGE e as coordenadas já calculadas
-        uses: actions/cache@v4
-        with:
-          path: .cnefe
-          key: postos-cnefe-${{ github.run_id }}
-          restore-keys: postos-cnefe-
-      - name: Gerar os dados de postos (ANP + IBGE)
-        continue-on-error: true
-        run: |
-          pip install --quiet openpyxl==3.1.5
-          rm -f .cnefe/revendas.xlsx
-          python3 scripts/postos/gerar_postos.py --saida _site/postos --cnefe .cnefe --cache .cnefe/coordenadas.json
+          name: dados-postos
+          path: _site/postos
+      - name: Não publicar sem dados de postos válidos
+        run: test -s _site/postos/indice.json
       - name: Publicar no Firebase Hosting (controlecarro.web.app)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:

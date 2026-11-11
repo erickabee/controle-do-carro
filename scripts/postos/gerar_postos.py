@@ -24,7 +24,7 @@ Uso:
   python3 scripts/postos/gerar_postos.py --saida _site/postos [--revendas arquivo.xlsx]
          [--cnefe pasta-de-cache] [--cache coordenadas.json] [--municipios "CAMPINAS/SP" ...]
 """
-import argparse, csv, io, json, os, re, statistics, sys, unicodedata, urllib.request, zipfile, datetime, math
+import argparse, csv, io, json, os, re, statistics, sys, time, unicodedata, urllib.parse, urllib.request, zipfile, datetime, math
 
 PAGINA_ANP = ('https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/'
               'levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas')
@@ -43,6 +43,11 @@ PRODUTOS = {'GASOLINA COMUM': 'GC', 'GASOLINA ADITIVADA': 'GA', 'ETANOL': 'ET',
 TIPOS_VIA = {'RUA', 'R', 'AVENIDA', 'AV', 'RODOVIA', 'ROD', 'ESTRADA', 'EST', 'PRACA', 'TRAVESSA', 'ALAMEDA',
              'VIA', 'ACESSO', 'MARGINAL', 'LARGO', 'VIADUTO', 'PARQUE', 'BR', 'KM'}
 AGENTE = {'User-Agent': 'controle-de-bordo (dados abertos ANP/IBGE)'}
+# Nomes que a ANP e o IBGE escrevem de jeitos diferentes (ANP -> IBGE)
+APELIDOS = {('MOGI MIRIM', 'SP'): 'MOJI MIRIM', ('EMBU DAS ARTES', 'SP'): 'EMBU', ('MOGI GUACU', 'SP'): 'MOJI GUACU',
+            ('SANTA ISABEL DO PARA', 'PA'): 'SANTA IZABEL DO PARA', ('ITAPAGE', 'CE'): 'ITAPAJE',
+            ('SAO LUIZ DO PARAITINGA', 'SP'): 'SAO LUIS DO PARAITINGA', ('PARATI', 'RJ'): 'PARATY',
+            ('BALNEARIO DE PICARRAS', 'SC'): 'BALNEARIO PICARRAS', ('ASSU', 'RN'): 'ACU'}
 
 
 def norm(t):
@@ -50,12 +55,20 @@ def norm(t):
     return ' '.join(re.sub(r'[^A-Z0-9 ]', ' ', t).split())
 
 
-def baixar(url, destino=None):
-    with urllib.request.urlopen(urllib.request.Request(url, headers=AGENTE), timeout=600) as r:
-        dados = r.read()
+def baixar(url, destino=None, tentativas=3):
+    for t in range(tentativas):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=AGENTE), timeout=600) as r:
+                dados = r.read()
+            break
+        except Exception:
+            if t == tentativas - 1:
+                raise
+            time.sleep(5 * (t + 1))
     if destino:
-        with open(destino, 'wb') as f:
+        with open(destino + '.parcial', 'wb') as f:
             f.write(dados)
+        os.replace(destino + '.parcial', destino)   # nunca deixa um arquivo pela metade
     return dados
 
 
@@ -116,7 +129,8 @@ def arquivos_cnefe_da_uf(cuf, sigla, cache_listas):
     chave = cuf + '_' + sigla
     if chave not in cache_listas:
         html = baixar(CNEFE + chave + '/').decode('latin-1')
-        cache_listas[chave] = {norm(re.sub(r'^\d+_', '', n[:-4]).replace('_', ' ')): n
+        # os nomes vêm codificados (ex.: HORTOL%c3%82NDIA) e com hífen (MOJI-MIRIM)
+        cache_listas[chave] = {norm(re.sub(r'^\d+_', '', urllib.parse.unquote(n)[:-4]).replace('_', ' ').replace('-', ' ')): n
                                for n in re.findall(r'href="(\d{7}_[^"]+\.zip)"', html)}
     return cache_listas[chave]
 
@@ -203,32 +217,47 @@ def main():
         por_municipio.setdefault((p['cuf'], p['uf'], p['m']), []).append(p)
 
     listas, municipios, ceps = {}, [], {}
+    falhas_ibge, sem_arquivo = [], []
     os.makedirs(os.path.join(a.saida, 'municipios'), exist_ok=True)
     os.makedirs(os.path.join(a.saida, 'cep'), exist_ok=True)
+    os.makedirs(os.path.join(a.cnefe, 'zips'), exist_ok=True)
+    os.makedirs(os.path.join(a.cnefe, 'centros'), exist_ok=True)
     contagem = {'endereco': 0, 'rua': 0, 'cep': 0, None: 0}
+    chave_end = lambda p: norm(p['rua'] + ' ' + p['num'] + ' ' + p['cep'])
     for (cuf, uf, nome), lista in sorted(por_municipio.items()):
-        arquivos = arquivos_cnefe_da_uf(cuf, uf, listas)
-        arq = arquivos.get(nome)
-        if not arq:
-            print('  CNEFE sem arquivo para', nome, uf); continue
-        codigo = arq[:7]
-        chave_end = lambda p: norm(p['rua'] + ' ' + p['num'] + ' ' + p['cep'])
+        try:
+            arquivos = arquivos_cnefe_da_uf(cuf, uf, listas)
+        except Exception as e:
+            arquivos = {}; falhas_ibge.append(nome + '/' + uf + ' (lista: ' + type(e).__name__ + ')')
+        arq = arquivos.get(APELIDOS.get((nome, uf), nome))
+        if not arq and arquivos:
+            sem_arquivo.append(nome + '/' + uf)
+        codigo = arq[:7] if arq else 'x' + cuf + norm(nome).replace(' ', '')[:20]
         falta = [p for p in lista if not (p['id'] in cache and cache[p['id']].get('k') == chave_end(p))]
-        centros = None
-        if falta or True:   # o centro de cada CEP também serve para a busca por CEP
-            zp = os.path.join(a.cnefe, arq)
-            if not os.path.exists(zp):
-                print('  baixando CNEFE', arq)
-                baixar(CNEFE + cuf + '_' + uf + '/' + arq, zp)
-            centros, por_cep_num, por_rua = indice_cnefe(zp)
-            for p in falta:
-                la, lo, pr = localizar(p, centros, por_cep_num, por_rua)
-                cache[p['id']] = {'k': chave_end(p), 'la': la, 'lo': lo, 'pr': pr}
-            for cep, (la, lo, raio) in centros.items():
-                ceps.setdefault(cep[:3], {})[cep] = [la, lo, codigo]
+        arq_centros = os.path.join(a.cnefe, 'centros', codigo + '.json')
+        centros = json.load(open(arq_centros)) if os.path.exists(arq_centros) else None
+        if arq and (falta or centros is None):
+            # O CNEFE (2022) não muda: só é lido quando há posto novo ou endereço mudou.
+            try:
+                zp = os.path.join(a.cnefe, 'zips', arq)
+                if not os.path.exists(zp):
+                    baixar(CNEFE + cuf + '_' + uf + '/' + arq, zp)
+                centros, por_cep_num, por_rua = indice_cnefe(zp)
+                for p in falta:
+                    la, lo, pr = localizar(p, centros, por_cep_num, por_rua)
+                    cache[p['id']] = {'k': chave_end(p), 'la': la, 'lo': lo, 'pr': pr}
+                with open(arq_centros, 'w') as f:
+                    json.dump(centros, f, separators=(',', ':'))
+                del por_cep_num, por_rua
+            except Exception as e:
+                falhas_ibge.append(nome + '/' + uf + ' (' + type(e).__name__ + ')')
+        for cep, v in (centros or {}).items():
+            ceps.setdefault(cep[:3], {})[cep] = [v[0], v[1], codigo]
         saida = []
         for p in sorted(lista, key=lambda x: x['n']):
-            c = cache[p['id']]
+            c = cache.get(p['id'])
+            if not c or c.get('k') != chave_end(p):
+                c = {'la': None, 'lo': None, 'pr': None}      # sem localização segura: aparece sem distância
             contagem[c['pr']] += 1
             end = p['rua'].title() + (', ' + p['num'] if p['num'] else '') + (' - ' + p['bairro'].title() if p['bairro'] else '')
             saida.append({'id': p['id'], 'n': p['n'], 'b': p['b'], 'e': end, 'cep': p['cep'],
@@ -236,10 +265,10 @@ def main():
         pontos = [(x['la'], x['lo']) for x in saida if x['la'] is not None]
         if pontos:
             cla, clo = statistics.mean(x[0] for x in pontos), statistics.mean(x[1] for x in pontos)
+        elif centros:
+            cla = statistics.mean(v[0] for v in centros.values()); clo = statistics.mean(v[1] for v in centros.values())
         else:
-            cs = list(centros.values()) if centros else []
-            cla = statistics.mean(x[0] for x in cs) if cs else None
-            clo = statistics.mean(x[1] for x in cs) if cs else None
+            cla = clo = None
         raio_m = max((distancia_km(cla, clo, x, y) for x, y in pontos), default=0) if cla is not None else 0
         with open(os.path.join(a.saida, 'municipios', codigo + '.json'), 'w') as f:
             json.dump({'m': nome.title(), 'uf': uf, 'postos': saida}, f, ensure_ascii=False, separators=(',', ':'))
@@ -254,6 +283,10 @@ def main():
                   'localizacao': 'IBGE — CNEFE 2022 (Cadastro Nacional de Endereços para Fins Estatísticos)'},
         'periodo': {'inicio': periodo[0], 'fim': periodo[1]} if periodo else None,
         'geradoEm': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds'),
+        'estatisticas': {'postos': sum(contagem.values()), 'municipios': len(municipios),
+                         'localizados': contagem['endereco'] + contagem['rua'], 'aproximados': contagem['cep'],
+                         'semLocalizacao': contagem[None], 'falhasIbge': falhas_ibge, 'semArquivoIbge': sem_arquivo},
+        'ceps': sorted(ceps),
         'municipios': municipios}
     with open(os.path.join(a.saida, 'indice.json'), 'w') as f:
         json.dump(indice, f, ensure_ascii=False, separators=(',', ':'))
@@ -262,6 +295,8 @@ def main():
             json.dump(cache, f, separators=(',', ':'))
     total = sum(contagem.values()) or 1
     print('Localização dos postos:', {str(k): f'{v} ({v * 100 // total}%)' for k, v in contagem.items()})
+    print('Municípios sem arquivo no IBGE:', sem_arquivo or 'nenhum')
+    print('Falhas ao ler o IBGE:', falhas_ibge or 'nenhuma')
 
 
 if __name__ == '__main__':

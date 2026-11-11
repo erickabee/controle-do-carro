@@ -1573,17 +1573,26 @@
 
   function avisoDados(ind, status) {
     var periodo = ind.periodo ? C.fmtData(ind.periodo.inicio) + ' a ' + C.fmtData(ind.periodo.fim) : 'período não informado';
+    var at = ind.atualizacao;
+    // A última tentativa de atualizar falhou: os dados mostrados são os da última atualização bem-sucedida.
+    var falhou = at && at.ok === false && at.ultimaTentativa ?
+      '<p style="margin:6px 0 0">A atualização de ' + C.fmtData(at.ultimaTentativa.slice(0, 10)) + ' não conseguiu dados novos e válidos da ANP' +
+      (ind.geradoEm ? '; estes são os da última atualização bem-sucedida, de ' + C.fmtData(ind.geradoEm.slice(0, 10)) : '') + '.</p>' : '';
+    if (falhou && status.nivel === 'atual') {
+      return '<div class="caixa caixa-aviso"><strong>Preços da semana de ' + periodo + '</strong>' + falhou + '</div>';
+    }
     if (status.nivel === 'atual') return '<p class="selo-dados"><span class="ponto-status" aria-hidden="true"></span><span>Preços pesquisados pela ANP na semana de <strong>' + periodo + '</strong>.</span></p>';
     return '<div class="caixa caixa-aviso"><strong>' + (status.nivel === 'antigo' ? 'Os preços podem estar desatualizados' : 'Os preços estão desatualizados') + '</strong>' +
       '<p style="margin:6px 0 0">A última pesquisa disponível é da semana de ' + periodo + (status.dias !== null ? ' (há ' + C.plural(status.dias, 'dia', 'dias') + ')' : '') +
-      '. Os preços podem ter mudado; confira no posto.</p></div>';
+      '. Os preços podem ter mudado; confira no posto.</p>' + falhou + '</div>';
   }
   function fontePostos(ind) {
     return '<section class="fonte-postos"><h2>De onde vêm estes dados</h2>' +
       '<p><strong>Preços:</strong> ANP, Levantamento de Preços de Combustíveis (preços por posto revendedor). A pesquisa é <strong>semanal e por amostragem</strong>: nem todos os postos nem todas as cidades são pesquisados, e o preço pode ter mudado depois da coleta. ' +
       '<a href="https://www.gov.br/anp/pt-br/assuntos/precos-e-defesa-da-concorrencia/precos/levantamento-de-precos-de-combustiveis-ultimas-semanas-pesquisadas" target="_blank" rel="noopener">Página oficial da ANP</a></p>' +
       '<p><strong>Localização dos postos:</strong> estimada pelo endereço informado à ANP, com o Cadastro Nacional de Endereços do IBGE (CNEFE 2022). Quando não dá para localizar com segurança, o posto aparece sem distância.</p>' +
-      (ind && ind.geradoEm ? '<p class="legenda-simples">Dados preparados em ' + C.fmtData(ind.geradoEm.slice(0, 10)) + '.</p>' : '') +
+      (ind && ind.geradoEm ? '<p class="legenda-simples">Última atualização bem-sucedida: ' + C.fmtData(ind.geradoEm.slice(0, 10)) + '. Os preços são atualizados toda semana, depois que a ANP publica a pesquisa.</p>' : '') +
+      '<p class="legenda-simples">Fontes: ANP (Agência Nacional do Petróleo, Gás Natural e Biocombustíveis) e IBGE (CNEFE 2022). Dados abertos, reproduzidos com citação da fonte.</p>' +
       '<p class="legenda-simples">Esta consulta não grava nada nos abastecimentos da família.</p></section>';
   }
 
