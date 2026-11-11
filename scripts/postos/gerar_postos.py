@@ -44,7 +44,7 @@ TIPOS_VIA = {'RUA', 'R', 'AVENIDA', 'AV', 'RODOVIA', 'ROD', 'ESTRADA', 'EST', 'P
              'VIA', 'ACESSO', 'MARGINAL', 'LARGO', 'VIADUTO', 'PARQUE', 'BR', 'KM'}
 AGENTE = {'User-Agent': 'controle-de-bordo (dados abertos ANP/IBGE)'}
 # Nomes que a ANP e o IBGE escrevem de jeitos diferentes (ANP -> IBGE)
-APELIDOS = {('MOGI MIRIM', 'SP'): 'MOJI MIRIM', ('EMBU DAS ARTES', 'SP'): 'EMBU', ('MOGI GUACU', 'SP'): 'MOJI GUACU',
+APELIDOS = {('MOGI MIRIM', 'SP'): 'MOJI MIRIM', ('EMBU DAS ARTES', 'SP'): 'EMBU',
             ('SANTA ISABEL DO PARA', 'PA'): 'SANTA IZABEL DO PARA', ('ITAPAGE', 'CE'): 'ITAPAJE',
             ('SAO LUIZ DO PARAITINGA', 'SP'): 'SAO LUIS DO PARAITINGA', ('PARATI', 'RJ'): 'PARATY',
             ('BALNEARIO DE PICARRAS', 'SC'): 'BALNEARIO PICARRAS', ('ASSU', 'RN'): 'ACU'}
