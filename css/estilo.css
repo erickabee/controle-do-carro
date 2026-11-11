@@ -888,3 +888,97 @@ body.modo-entrada .tela { max-width: none; padding: 0; }
 .fonte-postos { margin-top: 1.5rem; padding: 1rem 1.1rem; border: 1px dashed var(--linha-forte); border-radius: var(--raio-painel); font-size: .92rem; color: var(--tinta-2); }
 .fonte-postos h2 { font-size: 1rem; }
 @media (min-width: 1024px) { body[data-rota="postos"] .tela { max-width: 52rem; } }
+
+/* =====================================================================
+   Microinterações: resposta ao toque, transições de tela e de janelas.
+   Curtas (até 0,25 s) e discretas. Com "reduzir movimento" ligado no
+   aparelho, tudo aparece direto, sem animação (bloco no fim).
+   ===================================================================== */
+:root { --suave: cubic-bezier(.2, .8, .2, 1); --mola: cubic-bezier(.34, 1.56, .64, 1); }
+
+/* Toque: o elemento "afunda" levemente e escurece um pouco */
+.botao, .escolha-carro, .vaga-livre, .linha-ajuste, .opcao-carro, .filtros button, .abas button,
+.topo button, .topo-voltar, .botao-voltar, .menu a, .cal-dia, .cal-nav, .cal-acao, .data-abrir,
+.mostrar-senha, .faixa-demo button, .opcao input + span, .posto, .link-botao {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .16s var(--suave), background-color .18s var(--suave), border-color .18s var(--suave),
+    box-shadow .2s var(--suave), color .18s var(--suave), opacity .18s var(--suave);
+}
+.botao:active, .topo button:active, .topo-voltar:active, .botao-voltar:active, .filtros button:active,
+.abas button:active, .opcao-carro:active, .cal-acao:active, .data-abrir:active, .mostrar-senha:active,
+.faixa-demo button:active, .vaga-livre:active { transform: scale(.97); }
+.data-abrir:active, .mostrar-senha:active { transform: translateY(-50%) scale(.94); }
+.escolha-carro:active, .linha-ajuste:active, .posto:active { transform: scale(.985); }
+.opcao input + span:active, .cal-dia:active, .cal-nav:active { transform: scale(.94); }
+.botao-principal:active, .botao-carro:active { filter: brightness(.94); }
+.link-botao:active { opacity: .7; }
+
+/* Mouse (computador): um leve "levantar" ao passar por cima */
+@media (hover: hover) and (pointer: fine) {
+  .botao-principal:hover, .botao-carro:hover { box-shadow: 0 6px 16px color-mix(in srgb, var(--botao-fundo) 30%, transparent); transform: translateY(-1px); }
+  .botao-secundario:hover { transform: translateY(-1px); box-shadow: var(--sombra); }
+  .escolha-carro:hover, .posto:hover { transform: translateY(-2px); box-shadow: var(--sombra-alta); }
+  .botao:active, .escolha-carro:active, .posto:active { transform: scale(.98); box-shadow: none; }
+}
+
+/* Opções escolhidas: o ✓ aparece com um pequeno "pop" */
+.opcao input:checked + span::before { display: inline-block; animation: aparecer-check .28s var(--mola) both; }
+@keyframes aparecer-check { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.filtros button[aria-pressed=true], .abas button[aria-pressed=true] { animation: realce .25s var(--suave); }
+@keyframes realce { from { transform: scale(.96); } to { transform: scale(1); } }
+
+/* Menu: o destaque do item ativo surge suavemente */
+.menu svg { transition: background-color .22s var(--suave), transform .22s var(--mola); }
+.menu a.ativo svg { transform: scale(1.06); }
+.menu a:active svg { transform: scale(.9); }
+
+/* Troca de tela: o conteúdo entra com um leve deslize */
+.tela.entrando > * { animation: entrar-tela .24s var(--suave) both; }
+.tela.entrando > *:nth-child(2) { animation-delay: .03s; }
+.tela.entrando > *:nth-child(3) { animation-delay: .06s; }
+.tela.entrando > *:nth-child(n+4) { animation-delay: .08s; }
+@keyframes entrar-tela { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Janelas: fundo escurece e a janela sobe (celular) ou cresce (computador) */
+.janela-fundo:not([hidden]) { animation: fundo-entrar .2s var(--suave) both; }
+.janela-fundo:not([hidden]) .janela { animation: janela-subir .28s var(--suave) both; }
+@keyframes fundo-entrar { from { background-color: transparent; } }
+@keyframes janela-subir { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (min-width: 600px) {
+  .janela-fundo:not([hidden]) .janela { animation-name: janela-crescer; }
+  @keyframes janela-crescer { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
+}
+/* "Salvo!": o círculo cresce e o ✓ aparece em seguida */
+.marca-ok { animation: aparecer-check .35s var(--mola) .05s both; }
+.marca-ok::after { animation: desenhar-check .3s var(--suave) .22s both; }
+@keyframes desenhar-check { from { opacity: 0; transform: rotate(45deg) scale(.4); } to { opacity: 1; transform: rotate(45deg) scale(1); } }
+.marca-aviso { animation: aparecer-check .35s var(--mola) .05s both; }
+
+/* Conteúdo que abre ("Como a conta é feita", "Não sabe a quilometragem?"...) */
+details.mais summary { transition: color .18s var(--suave); }
+details.mais[open] > *:not(summary) { animation: entrar-tela .22s var(--suave) both; }
+.calendario:not([hidden]) { animation: entrar-tela .2s var(--suave) both; }
+
+/* Avisos de erro e sucesso dentro das telas */
+.caixa { animation: entrar-tela .22s var(--suave) both; }
+
+/* "Buscar postos"/"Entrando…": indicador girando enquanto espera */
+.botao[disabled] { cursor: progress; opacity: .85; }
+.botao.ocupado::after {
+  content: ""; width: 1.05em; height: 1.05em; border-radius: 50%; flex: none;
+  border: 2.5px solid currentColor; border-right-color: transparent; animation: girar .7s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+
+/* Sem animação para quem pediu "reduzir movimento" no aparelho */
+@media (prefers-reduced-motion: reduce) {
+  .tela.entrando > *, .janela-fundo:not([hidden]), .janela-fundo:not([hidden]) .janela, .marca-ok, .marca-ok::after, .marca-aviso,
+  .opcao input:checked + span::before, .filtros button[aria-pressed=true], .abas button[aria-pressed=true],
+  details.mais[open] > *:not(summary), .calendario:not([hidden]), .caixa { animation: none !important; }
+  .botao.ocupado::after { animation-duration: 2s; }
+  .botao:active, .botao:hover, .topo button:active, .topo-voltar:active, .botao-voltar:active, .filtros button:active,
+  .abas button:active, .opcao-carro:active, .cal-acao:active, .data-abrir:active, .mostrar-senha:active, .faixa-demo button:active,
+  .vaga-livre:active, .escolha-carro:active, .escolha-carro:hover, .linha-ajuste:active, .posto:active, .posto:hover,
+  .opcao input + span:active, .cal-dia:active, .cal-nav:active, .menu a.ativo svg, .menu a:active svg { transform: none; }
+  .data-abrir:active, .mostrar-senha:active { transform: translateY(-50%); }
+}

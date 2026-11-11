@@ -491,6 +491,18 @@
     login: telaLogin, verificar: telaVerificar, 'sem-familia': telaSemFamilia, 'sem-acesso': telaSemAcesso
   };
 
+  // Troca de tela: o conteúdo entra com um leve deslize (só quando a pessoa muda de tela,
+  // não quando a tela é atualizada por dados de outro celular). Veja .tela.entrando no CSS.
+  function animarEntrada() {
+    tela.classList.remove('entrando');
+    void tela.offsetWidth;            // reinicia a animação
+    tela.classList.add('entrando');
+    clearTimeout(fimEntrada);
+    fimEntrada = setTimeout(animarEntradaFim, 450);   // depois disso, atualizações da tela não animam de novo
+  }
+  var fimEntrada = null;
+  function animarEntradaFim() { tela.classList.remove('entrando'); }
+
   // manterRolagem: usado quando a tela é atualizada por dados vindos de outro celular.
   function desenhar(manterRolagem) {
     fecharJanela();
@@ -536,7 +548,7 @@
     (telas[nome] || telaGaragem)(r.param);
     if (window.CampoData) CampoData.ligar(tela);
     if (formulario && formulario.hash === (location.hash || '#inicio')) formulario.inicial = $('.tela form') ? estadoDosCampos() : null;
-    if (manterRolagem !== true) window.scrollTo(0, 0);
+    if (manterRolagem !== true) { window.scrollTo(0, 0); animarEntrada(); }
   }
   // De onde a pessoa veio, para "Voltar" e "Cancelar" dos formulários voltarem ao lugar certo.
   var hashDesenhado = null;     // tela mostrada antes desta mudança
@@ -1563,7 +1575,7 @@
       '<div class="campo"' + (st.onde === 'texto' && !/\d{5}/.test(st.texto) ? ' hidden' : '') + ' id="campo-raio"><span class="rotulo" id="rot-raio">Até que distância</span><div class="opcoes" role="radiogroup" aria-labelledby="rot-raio">' +
       [2, 5, 10, 20].map(function (r) { return '<label class="opcao"><input type="radio" name="raio" value="' + r + '"' + (st.raio === r ? ' checked' : '') + '><span>' + r + ' km</span></label>'; }).join('') +
       '</div><span class="dica">Distância em linha reta.</span></div>' +
-      '<button class="botao botao-principal botao-grande" type="submit" id="buscar-postos"' + (st.buscando ? ' disabled' : '') + '>' + ICONES.bomba + (st.buscando ? 'Buscando…' : 'Buscar postos') + '</button>' +
+      '<button class="botao botao-principal botao-grande' + (st.buscando ? ' ocupado' : '') + '" type="submit" id="buscar-postos"' + (st.buscando ? ' disabled' : '') + '>' + ICONES.bomba + (st.buscando ? 'Buscando…' : 'Buscar postos') + '</button>' +
       '</form>';
     h += '<div id="resultado-postos" aria-live="polite">' + (st.erro ? caixa('erro', st.erro) : '') + htmlResultadoPostos(st, prod) + '</div>';
     h += fontePostos(ind);
@@ -2296,8 +2308,8 @@
 
   function ocupado(botao, sim, texto) {
     if (!botao) return;
-    if (sim) { botao.dataset.texto = botao.innerHTML; botao.disabled = true; botao.textContent = texto || 'Aguarde…'; }
-    else { botao.disabled = false; if (botao.dataset.texto) botao.innerHTML = botao.dataset.texto; }
+    if (sim) { botao.dataset.texto = botao.innerHTML; botao.disabled = true; botao.textContent = texto || 'Aguarde…'; botao.classList.add('ocupado'); }
+    else { botao.disabled = false; botao.classList.remove('ocupado'); if (botao.dataset.texto) botao.innerHTML = botao.dataset.texto; }
   }
 
   function telaIniciando() {
