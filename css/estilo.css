@@ -719,7 +719,7 @@ body.modo-entrada .tela { max-width: none; padding: 0; }
   .topo-painel .topo-carro { order: 3; flex: 1 1 100%; }
 }
 @media (max-width: 440px) {
-  html[data-texto="enorme"] .tabela, html[data-texto="maior"] .tabela { font-size: .8rem; }
+  html[data-texto="enorme"] table.tabela, html[data-texto="maior"] table.tabela { font-size: min(.8rem, 3.6vw); }
   html[data-texto="enorme"] .tabela th, html[data-texto="enorme"] .tabela td { padding: .5rem .2rem; }
 }
 
@@ -982,3 +982,59 @@ details.mais[open] > *:not(summary) { animation: entrar-tela .22s var(--suave) b
   .opcao input + span:active, .cal-dia:active, .cal-nav:active, .menu a.ativo svg, .menu a:active svg { transform: none; }
   .data-abrir:active, .mostrar-senha:active { transform: translateY(-50%); }
 }
+
+/* =====================================================================
+   Celulares estreitos e fonte do celular aumentada.
+   No Android, aumentar a fonte do sistema faz o Chrome ampliar a página:
+   na prática a tela fica mais estreita (360 px viram ~280 px). Aqui os
+   pontos que estouravam passam a caber, sem diminuir os textos principais.
+   ===================================================================== */
+/* Menu de baixo: 5 botões sempre cabem; o rótulo acompanha a largura da tela */
+@media (max-width: 767px) {
+  .menu { gap: 0; padding-left: .25rem; padding-right: .25rem; }
+  .menu a { font-size: min(.8rem, 3.5vw); letter-spacing: -0.01em; padding: 0 1px; white-space: nowrap; }
+  .menu svg { padding: .2rem min(1rem, 2.6vw); }
+  html[data-texto="enorme"] .menu a, html[data-texto="maior"] .menu a { font-size: min(.8rem, 3.5vw); }
+  html[data-texto="enorme"] .menu svg { padding: .2rem min(1rem, 2.6vw); }
+}
+/* Nomes e títulos quebram entre palavras, nunca no meio ("exempl-o") */
+.escolha-carro .nome, .topo-nome, .linha-titulo, h1, h2, .posto-nome strong, .arquivo-nome, .carro-do-registro strong { overflow-wrap: break-word; word-break: normal; hyphens: manual; }
+h1 { font-size: min(1.9rem, 9vw); }
+@media (max-width: 420px) {
+  /* Entrada: o logo se ajusta à largura */
+  .logo-horizontal { gap: .6rem; }
+  .logo-horizontal .logo-simbolo { width: min(4.4rem, 20vw); }
+  .logo-horizontal .logo-nome { white-space: normal; font-size: min(1.12rem, 5.2vw); }
+  .logo-horizontal small { font-size: min(.82rem, 3.6vw); }
+  /* Garagem: mais espaço para o nome do carro (a seta é decorativa: o cartão inteiro é tocável) */
+  .escolha-carro .abrir { display: none; }
+  .escolha-carro .nome { font-size: min(1.38rem, 6.4vw); }
+  .emblema { min-width: min(3.3rem, 14vw); height: min(3.3rem, 14vw); }
+  .km-carro .odometro { font-size: min(1.35rem, 6.2vw); }
+  /* Topo do painel e dos formulários: botões compactos, nome do carro em até 2 linhas */
+  .topo { padding-left: .75rem; padding-right: .75rem; }
+  .topo button, .topo-voltar, .botao-voltar { min-height: 2.75rem; padding: .35rem .75rem; font-size: min(.95rem, 4.2vw); }
+  .topo-voltar, .botao-voltar { padding-left: .45rem; }
+  .topo-nome { white-space: normal; font-size: min(1.28rem, 5.8vw); }
+  .topo-formulario { gap: .6rem; }
+  /* Quadro do painel e números */
+  .quadro .odometro { font-size: min(2.1rem, 9.5vw); }
+  .info-valor, .quadro .info-valor { font-size: min(1.6rem, 7.6vw); }
+  .quadro .info-valor { font-size: min(1.9rem, 8.6vw); }
+  /* Tabela dos relatórios */
+  table.tabela { font-size: min(.95rem, 3.6vw); }
+  .tabela th, .tabela td { padding: .5rem .2rem; }
+  /* Opções em blocos (Aparência) e chips: o texto pode quebrar dentro do bloco */
+  .segmentado .opcao input + span { font-size: min(1rem, 4vw); padding-left: .25rem; padding-right: .25rem; }
+  .posto-preco { font-size: min(1.45rem, 6.4vw); }
+  .tela { padding-left: max(.75rem, 3vw); padding-right: max(.75rem, 3vw); }
+}
+/* Abas do Histórico e linha "Mostrando": cabem com fonte grande */
+.abas button { white-space: normal; overflow-wrap: break-word; line-height: 1.2; padding: .35rem .4rem; font-size: min(1rem, 4.4vw); }
+.carro-da-tela { flex-wrap: nowrap; align-items: flex-start; }
+.carro-da-tela .ponto-carro { margin-top: .4em; }
+.carro-da-tela > span:not(.ponto-carro) { flex: 1; min-width: 0; }
+.carro-da-tela .link-botao { flex: none; }
+/* Tabela dos relatórios: cabeçalho acompanha o tamanho da tabela */
+.tabela th { font-size: .85em; }
+@media (max-width: 420px) { .tabela td:first-child { white-space: nowrap; } }

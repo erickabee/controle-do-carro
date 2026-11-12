@@ -1021,6 +1021,41 @@ await teste('Postos: consultar não grava nada nos abastecimentos da família', 
   assert.equal(depois, antes);
 });
 
+await teste('celular pequeno ou fonte do Android aumentada (320 e 280 px): nada estoura nem sai da tela', async () => {
+  for (const largura of [320, 280]) {
+    const ctx = await navegador.newContext({ viewport: { width: largura, height: 640 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
+    const q = await ctx.newPage(); q.errosJs = []; q.on('pageerror', e => q.errosJs.push(e.message));
+    await q.goto(SITE); await q.waitForSelector('#form-login', { timeout: 30000 });
+    const conferir = (tela) => q.evaluate((tela) => {
+      const larg = document.documentElement.clientWidth, erros = [];
+      if (document.documentElement.scrollWidth > larg) erros.push(tela + ': a página rola para o lado');
+      document.querySelectorAll('#menu a').forEach(a => {
+        const r = document.createRange(); r.selectNodeContents(a); const b = a.getBoundingClientRect();
+        if ([...r.getClientRects()].some(x => x.width > 2 && (x.right > b.right + 1 || x.left < b.left - 1))) erros.push(tela + ': rótulo do menu sai do botão (' + a.textContent.trim() + ')');
+      });
+      document.querySelectorAll('.logo-horizontal, .escolha-carro, .topo-dentro, .abas').forEach(el => {
+        const b = el.getBoundingClientRect(); if (b.width && b.right > larg + 1) erros.push(tela + ': ' + el.className + ' passa da tela');
+      });
+      document.querySelectorAll('.escolha-carro .nome').forEach(n => {
+        if (/\S-?\n?\S/.test(n.textContent) && n.getClientRects().length && n.innerText.split('\n').some(l => /^\w{1,2}\)?$/.test(l.trim()))) erros.push(tela + ': nome do carro quebrado no meio da palavra');
+      });
+      return erros;
+    }, tela);
+    let erros = await conferir('entrada');
+    await q.click('[data-acao=demo]'); await q.waitForSelector('.garagem');
+    erros = erros.concat(await conferir('Garagem'));
+    await q.click('.escolha-carro >> nth=0'); await q.waitForSelector('.quadro');
+    erros = erros.concat(await conferir('painel'));
+    for (const r of ['#historico', '#relatorios', '#postos', '#ajustes']) {
+      await q.evaluate(h => { location.hash = h; }, r); await q.waitForTimeout(300);
+      erros = erros.concat(await conferir(r));
+    }
+    assert.deepEqual(erros, [], largura + ' px');
+    assert.deepEqual(q.errosJs, []);
+    await ctx.close();
+  }
+});
+
 await teste('nenhum erro de JavaScript nas telas novas', async () => assert.deepEqual(ap.errosJs, []));
 
 await teste('nenhum erro de JavaScript durante os testes', async () => assert.deepEqual(p.errosJs, []));
